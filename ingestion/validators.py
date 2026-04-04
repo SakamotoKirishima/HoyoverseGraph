@@ -1,18 +1,26 @@
-"""Validation helpers for entities_seed, claims_seed, and sources_registry data.
+"""Validation helpers for workbook ingestion sheets.
 
 This module validates parsed workbook rows (required fields, formats, allowed
 values, and duplicates) and returns ``valid_rows``, ``errors``, and
 ``warnings`` for downstream pipeline steps.
 
 Run (quick import check):
-    python -c "from ingestion.validators import validate_entities_rows, validate_claims_rows, validate_sources_rows; print('ok')"
+    python -c "from ingestion.validators import validate_entities_rows, validate_claims_rows, validate_sources_rows, validate_source_assets_rows; print('ok')"
 Typical usage (Python):
-    from ingestion.validators import validate_entities_rows, validate_claims_rows, validate_sources_rows
+    from ingestion.validators import (
+        validate_entities_rows,
+        validate_claims_rows,
+        validate_sources_rows,
+        validate_source_assets_rows,
+    )
     valid_entity_rows, entity_errors, entity_warnings = validate_entities_rows(entities_rows, entity_type_rows)
     valid_claim_rows, claim_errors, claim_warnings = validate_claims_rows(
         claims_rows, entities_rows, relationship_types_rows, sources_rows, source_assets_rows
     )
     valid_source_rows, source_errors, source_warnings = validate_sources_rows(sources_rows)
+    valid_asset_rows, asset_errors, asset_warnings = validate_source_assets_rows(
+        source_asset_rows, sources_rows
+    )
 """
 
 from __future__ import annotations
@@ -27,6 +35,7 @@ REQUIRED_ENTITY_FIELDS: tuple[str, ...] = ("entity_id", "canonical_name", "entit
 ALLOWED_STARTER_STATUS: set[str] = {"seed", "candidate", "backlog"}
 CLAIM_ID_PATTERN = re.compile(r"^CLM-\d{4}$")
 SOURCE_ID_PATTERN = re.compile(r"^SRC-(?:INT|[A-Z0-9]+)-\d{3,4}$")
+ASSET_ID_PATTERN = re.compile(r"^AST(?:-|_)?\d{3,4}$")
 REQUIRED_CLAIM_FIELDS: tuple[str, ...] = (
     "claim_id",
     "subject_entity_id",
@@ -76,6 +85,25 @@ WEB_SOURCE_FORMATS: set[str] = {
     "interview",
     "video",
     "trailer",
+}
+REQUIRED_SOURCE_ASSET_FIELDS: tuple[str, ...] = ("asset_id", "source_id", "asset_type")
+ALLOWED_SOURCE_ASSET_TYPES: set[str] = {
+    "screenshot",
+    "video_reference",
+    "transcript_excerpt",
+    "image",
+    "audio",
+    "document",
+    "web_archive",
+    "quote",
+    "other",
+}
+TIMESTAMP_STYLE_ASSET_TYPES: set[str] = {"video_reference", "audio", "transcript_excerpt"}
+FILE_EXPECTED_ASSET_TYPES: set[str] = {
+    "screenshot",
+    "image",
+    "document",
+    "web_archive",
 }
 
 
@@ -150,6 +178,21 @@ def _is_parseable_publication_date(value: Any) -> bool:
         except ValueError:
             continue
     return False
+
+
+def _normalize_bool_like(value: Any) -> Any:
+    """Normalize common boolean-like values to bool, otherwise keep original."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"true", "t", "yes", "y", "1"}:
+            return True
+        if text in {"false", "f", "no", "n", "0"}:
+            return False
+    return value
 
 
 def validate_entity_row(
@@ -563,6 +606,138 @@ def validate_sources_rows(
             warnings.append(
                 "Likely duplicate source records (title, source_type, game, scope) "
                 f"{soft_key} found at rows {sorted(row_numbers)}."
+            )
+
+    valid_rows = [
+        row for row_number, row in valid_candidates if row_number not in duplicate_rows
+    ]
+
+    return valid_rows, errors, warnings
+
+
+def validate_source_asset_row(
+    row: Mapping[str, Any],
+    row_number: int,
+    valid_source_ids: set[str],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    """Validate one source_assets row.
+
+    Args:
+        row: Parsed source_asset row keyed by original column names.
+        row_number: Workbook row number for error/warning reporting.
+        valid_source_ids: Existing source IDs from sources_registry.
+
+    Returns:
+        A tuple of (normalized_row, errors, warnings).
+    """
+    normalized = _normalize_row_values(row)
+    normalized["is_primary_evidence"] = _normalize_bool_like(normalized.get("is_primary_evidence"))
+
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    for field in REQUIRED_SOURCE_ASSET_FIELDS:
+        if normalized.get(field) is None:
+            errors.append(f"Row {row_number}: missing required field '{field}'.")
+
+    asset_id = normalized.get("asset_id")
+    if asset_id is not None and (
+        not isinstance(asset_id, str) or not ASSET_ID_PATTERN.match(asset_id)
+    ):
+        errors.append(
+            f"Row {row_number}: asset_id '{asset_id}' must match project pattern "
+            "AST### or AST-###."
+        )
+
+    source_id = normalized.get("source_id")
+    if isinstance(source_id, str) and source_id not in valid_source_ids:
+        errors.append(
+            f"Row {row_number}: source_id '{source_id}' does not exist in sources_registry."
+        )
+
+    asset_type = normalized.get("asset_type")
+    if asset_type is not None:
+        if not isinstance(asset_type, str) or asset_type not in ALLOWED_SOURCE_ASSET_TYPES:
+            errors.append(
+                f"Row {row_number}: asset_type '{asset_type}' must be one of "
+                f"{sorted(ALLOWED_SOURCE_ASSET_TYPES)}."
+            )
+
+    file_path_or_url = normalized.get("file_path_or_url")
+    locator = normalized.get("locator")
+    if file_path_or_url is None and locator is None:
+        errors.append(
+            f"Row {row_number}: at least one of 'file_path_or_url' or 'locator' must be present."
+        )
+
+    is_primary_evidence = normalized.get("is_primary_evidence")
+    if is_primary_evidence is not None and not isinstance(is_primary_evidence, bool):
+        errors.append(
+            f"Row {row_number}: is_primary_evidence '{is_primary_evidence}' must be boolean-like."
+        )
+
+    if normalized.get("description") is None:
+        warnings.append(f"Row {row_number}: missing description.")
+
+    if isinstance(asset_type, str) and asset_type in TIMESTAMP_STYLE_ASSET_TYPES and locator is None:
+        warnings.append(
+            f"Row {row_number}: missing locator for timestamp-style asset_type '{asset_type}'."
+        )
+
+    if isinstance(asset_type, str) and asset_type in FILE_EXPECTED_ASSET_TYPES:
+        if not isinstance(file_path_or_url, str) or file_path_or_url.strip() == "":
+            warnings.append(
+                f"Row {row_number}: missing or suspicious file_path_or_url for asset_type '{asset_type}'."
+            )
+
+    return normalized, errors, warnings
+
+
+def validate_source_assets_rows(
+    source_asset_rows: Sequence[Mapping[str, Any]],
+    sources_rows: Sequence[Mapping[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Validate source_assets rows and return valid rows, errors, and warnings."""
+    valid_source_ids = _extract_non_empty_str_values(sources_rows, "source_id")
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    valid_candidates: list[tuple[int, dict[str, Any]]] = []
+
+    for idx, row in enumerate(source_asset_rows, start=2):
+        normalized, row_errors, row_warnings = validate_source_asset_row(
+            row=row,
+            row_number=idx,
+            valid_source_ids=valid_source_ids,
+        )
+        errors.extend(row_errors)
+        warnings.extend(row_warnings)
+        if not row_errors:
+            valid_candidates.append((idx, normalized))
+
+    duplicate_key_to_rows: dict[tuple[str, str, str | None, str | None], list[int]] = {}
+    for row_number, row in valid_candidates:
+        source_id = row.get("source_id")
+        asset_type = row.get("asset_type")
+        file_path_or_url = row.get("file_path_or_url")
+        locator = row.get("locator")
+
+        if isinstance(source_id, str) and isinstance(asset_type, str):
+            key = (
+                source_id,
+                asset_type,
+                file_path_or_url if isinstance(file_path_or_url, str) else None,
+                locator if isinstance(locator, str) else None,
+            )
+            duplicate_key_to_rows.setdefault(key, []).append(row_number)
+
+    duplicate_rows: set[int] = set()
+    for key, row_numbers in duplicate_key_to_rows.items():
+        if len(row_numbers) > 1:
+            duplicate_rows.update(row_numbers)
+            errors.append(
+                "Duplicate source_asset (source_id, asset_type, file_path_or_url, locator) "
+                f"{key} found at rows {sorted(row_numbers)}."
             )
 
     valid_rows = [
