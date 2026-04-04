@@ -25,6 +25,22 @@ CREATE INDEX IF NOT EXISTS idx_entities_entity_type
 CREATE INDEX IF NOT EXISTS idx_entities_primary_scope_game
     ON entities (primary_scope_game);
 
+-- Full-text search prep for entities.
+-- This keeps search implementation out of schema while making future
+-- @@ to_tsquery/websearch_to_tsquery queries fast.
+CREATE INDEX IF NOT EXISTS idx_entities_search_fts
+    ON entities
+    USING GIN (
+        to_tsvector(
+            'simple',
+            coalesce(canonical_name, '') || ' ' ||
+            coalesce(display_label, '') || ' ' ||
+            coalesce(aliases_pipe_delimited, '') || ' ' ||
+            coalesce(short_description, '') || ' ' ||
+            coalesce(notes, '')
+        )
+    );
+
 -- Step 2: claims table.
 CREATE TABLE IF NOT EXISTS claims (
     claim_id TEXT PRIMARY KEY,
@@ -32,7 +48,7 @@ CREATE TABLE IF NOT EXISTS claims (
     predicate TEXT NOT NULL,
     object_entity_id TEXT NOT NULL,
     evidence_status TEXT,
-    confidence NUMERIC,
+    confidence NUMERIC(4,3),
     source_id TEXT,
     asset_id TEXT,
     locator TEXT,
@@ -49,8 +65,10 @@ CREATE TABLE IF NOT EXISTS claims (
         FOREIGN KEY (supersedes_claim_id) REFERENCES claims (claim_id),
     CONSTRAINT fk_claims_contradicts
         FOREIGN KEY (contradicts_claim_id) REFERENCES claims (claim_id),
+    CONSTRAINT chk_claims_confidence_range
+        CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
     CONSTRAINT uq_claims_spo_source
-        UNIQUE (subject_entity_id, predicate, object_entity_id, source_id)
+        UNIQUE NULLS NOT DISTINCT (subject_entity_id, predicate, object_entity_id, source_id)
 );
 
 -- Query-path indexes for graph traversal and evidence filtering.
@@ -72,6 +90,21 @@ CREATE INDEX IF NOT EXISTS idx_claims_confidence
 CREATE INDEX IF NOT EXISTS idx_claims_source_id
     ON claims (source_id);
 
+CREATE INDEX IF NOT EXISTS idx_claims_asset_id
+    ON claims (asset_id);
+
+CREATE INDEX IF NOT EXISTS idx_claims_supersedes_claim_id
+    ON claims (supersedes_claim_id);
+
+CREATE INDEX IF NOT EXISTS idx_claims_contradicts_claim_id
+    ON claims (contradicts_claim_id);
+
+CREATE INDEX IF NOT EXISTS idx_claims_subject_predicate
+    ON claims (subject_entity_id, predicate);
+
+CREATE INDEX IF NOT EXISTS idx_claims_object_predicate
+    ON claims (object_entity_id, predicate);
+
 -- Step 3: sources table (sources_registry).
 CREATE TABLE IF NOT EXISTS sources (
     source_id TEXT PRIMARY KEY,
@@ -89,7 +122,8 @@ CREATE TABLE IF NOT EXISTS sources (
     publication_date DATE,
     notes TEXT,
     CONSTRAINT uq_sources_dedupe_fingerprint
-        UNIQUE (title, source_type, source_format, game, scope, language, publication_date)
+        UNIQUE NULLS NOT DISTINCT
+        (title, source_type, source_format, game, scope, language, publication_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sources_title
@@ -114,9 +148,19 @@ CREATE INDEX IF NOT EXISTS idx_sources_publication_date
     ON sources (publication_date);
 
 -- Link claims to sources once sources exists in schema.
-ALTER TABLE claims
-    ADD CONSTRAINT fk_claims_source
-    FOREIGN KEY (source_id) REFERENCES sources (source_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_claims_source'
+    ) THEN
+        ALTER TABLE claims
+            ADD CONSTRAINT fk_claims_source
+            FOREIGN KEY (source_id) REFERENCES sources (source_id)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- Step 4: source_assets table.
 -- source_assets stores evidence artifacts/attachments that support a source
@@ -135,7 +179,7 @@ CREATE TABLE IF NOT EXISTS source_assets (
     CONSTRAINT fk_source_assets_source
         FOREIGN KEY (source_id) REFERENCES sources (source_id),
     CONSTRAINT uq_source_assets_dedupe_fingerprint
-        UNIQUE (source_id, asset_type, file_path_or_url, locator)
+        UNIQUE NULLS NOT DISTINCT (source_id, asset_type, file_path_or_url, locator)
 );
 
 CREATE INDEX IF NOT EXISTS idx_source_assets_source_id
@@ -157,6 +201,7 @@ BEGIN
     ) THEN
         ALTER TABLE claims
             ADD CONSTRAINT fk_claims_asset
-            FOREIGN KEY (asset_id) REFERENCES source_assets (asset_id);
+            FOREIGN KEY (asset_id) REFERENCES source_assets (asset_id)
+            ON DELETE SET NULL;
     END IF;
 END $$;
