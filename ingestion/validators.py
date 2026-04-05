@@ -33,9 +33,27 @@ from urllib.parse import urlparse
 ENTITY_ID_PATTERN = re.compile(r"^ENT-\d{4}$")
 REQUIRED_ENTITY_FIELDS: tuple[str, ...] = ("entity_id", "canonical_name", "entity_type")
 ALLOWED_STARTER_STATUS: set[str] = {"seed", "candidate", "backlog"}
+ALLOWED_GAME_VALUES: set[str] = {
+    "Honkai Impact 3",
+    "Honkai: Star Rail",
+    "Genshin Impact",
+    "Gun Girls Z",
+    "Multi",
+}
+GAME_VALUE_ALIASES: dict[str, str] = {
+    "HI3": "Honkai Impact 3",
+    "Honkai Impact 3rd": "Honkai Impact 3",
+    "HSR": "Honkai: Star Rail",
+    "Genshin": "Genshin Impact",
+    "GGZ": "Gun Girls Z",
+    "Guns Girl Z": "Gun Girls Z",
+    "Cross-title": "Multi",
+}
 CLAIM_ID_PATTERN = re.compile(r"^CLM-\d{4}$")
-SOURCE_ID_PATTERN = re.compile(r"^SRC-(?:INT|[A-Z0-9]+)-\d{3,4}$")
-ASSET_ID_PATTERN = re.compile(r"^AST(?:-|_)?\d{3,4}$")
+ID_DOMAINS: tuple[str, ...] = ("HI3", "HSR", "GI", "GGZ", "WIKI", "HL", "INT", "GEN")
+_ID_DOMAIN_PATTERN = "(?:" + "|".join(ID_DOMAINS) + ")"
+SOURCE_ID_PATTERN = re.compile(rf"^SRC-{_ID_DOMAIN_PATTERN}-\d{{4}}$")
+ASSET_ID_PATTERN = re.compile(rf"^AST-{_ID_DOMAIN_PATTERN}-\d{{4}}$")
 REQUIRED_CLAIM_FIELDS: tuple[str, ...] = (
     "claim_id",
     "subject_entity_id",
@@ -52,32 +70,52 @@ REQUIRED_SOURCE_FIELDS: tuple[str, ...] = (
     "reliability_tier",
 )
 ALLOWED_SOURCE_TYPES: set[str] = {
-    "official",
+    "official_story",
+    "official_databank",
+    "official_profile",
     "official_companion",
     "community_wiki",
     "community_reference",
-    "developer_interview",
-    "social_post",
-    "news",
     "datamine",
+    "internal_editorial",
     "other",
 }
 ALLOWED_SOURCE_FORMATS: set[str] = {
+    "game",
     "in_game_text",
-    "patch_notes",
-    "website",
-    "wiki",
     "manga",
-    "trailer",
-    "interview",
-    "social_post",
-    "video",
     "article",
+    "interview",
+    "patch_notes",
+    "trailer",
+    "video",
+    "official_page",
+    "wiki",
+    "social_post",
+    "internal_note",
     "other",
 }
-ALLOWED_RELIABILITY_TIERS: set[str] = {"tier_1", "tier_2", "tier_3"}
+ALLOWED_RELIABILITY_TIERS: set[str] = {"tier_1", "tier_2", "tier_3", "tier_4"}
+ALLOWED_RELIABILITY_BY_SOURCE_TYPE: dict[str, set[str]] = {
+    # Hard rules:
+    # official_* -> tier_1 or tier_2
+    # community_wiki -> NOT tier_1
+    # community_reference -> tier_3 only
+    # datamine -> tier_3 only
+    # internal_editorial -> tier_4 only
+    # other -> tier_3 or tier_4
+    "official_story": {"tier_1", "tier_2"},
+    "official_databank": {"tier_1", "tier_2"},
+    "official_profile": {"tier_1", "tier_2"},
+    "official_companion": {"tier_1", "tier_2"},
+    "community_wiki": {"tier_2", "tier_3", "tier_4"},
+    "community_reference": {"tier_3"},
+    "datamine": {"tier_3"},
+    "internal_editorial": {"tier_4"},
+    "other": {"tier_3", "tier_4"},
+}
 WEB_SOURCE_FORMATS: set[str] = {
-    "website",
+    "official_page",
     "wiki",
     "social_post",
     "article",
@@ -88,14 +126,14 @@ WEB_SOURCE_FORMATS: set[str] = {
 }
 REQUIRED_SOURCE_ASSET_FIELDS: tuple[str, ...] = ("asset_id", "source_id", "asset_type")
 ALLOWED_SOURCE_ASSET_TYPES: set[str] = {
-    "screenshot",
-    "video_reference",
-    "transcript_excerpt",
     "image",
-    "audio",
+    "screenshot",
     "document",
     "web_archive",
     "quote",
+    "transcript_excerpt",
+    "video_reference",
+    "audio",
     "other",
 }
 TIMESTAMP_STYLE_ASSET_TYPES: set[str] = {"video_reference", "audio", "transcript_excerpt"}
@@ -180,6 +218,12 @@ def _is_parseable_publication_date(value: Any) -> bool:
     return False
 
 
+def _normalize_game_value(value: str) -> str:
+    """Normalize game labels to canonical values for validation."""
+    trimmed = value.strip()
+    return GAME_VALUE_ALIASES.get(trimmed, trimmed)
+
+
 def _normalize_bool_like(value: Any) -> Any:
     """Normalize common boolean-like values to bool, otherwise keep original."""
     if isinstance(value, bool):
@@ -235,6 +279,20 @@ def validate_entity_row(
                 f"Row {row_number}: starter_status '{starter_status}' must be one of "
                 f"{sorted(ALLOWED_STARTER_STATUS)}."
             )
+
+    primary_scope_game = normalized.get("primary_scope_game")
+    if primary_scope_game is not None:
+        if not isinstance(primary_scope_game, str):
+            errors.append(
+                f"Row {row_number}: primary_scope_game '{primary_scope_game}' must be a string."
+            )
+        else:
+            canonical_game = _normalize_game_value(primary_scope_game)
+            if canonical_game not in ALLOWED_GAME_VALUES:
+                errors.append(
+                    f"Row {row_number}: primary_scope_game '{primary_scope_game}' must be one of "
+                    f"{sorted(ALLOWED_GAME_VALUES)}."
+                )
 
     return normalized, errors, warnings
 
@@ -495,8 +553,8 @@ def validate_source_row(
         not isinstance(source_id, str) or not SOURCE_ID_PATTERN.match(source_id)
     ):
         errors.append(
-            f"Row {row_number}: source_id '{source_id}' must match project pattern "
-            "SRC-<GROUP>-#### (supports internal IDs like SRC-INT-001)."
+            f"Row {row_number}: source_id '{source_id}' must match "
+            f"SRC-{{DOMAIN}}-#### where DOMAIN is one of {ID_DOMAINS}."
         )
 
     source_type = normalized.get("source_type")
@@ -538,21 +596,43 @@ def validate_source_row(
             f"Row {row_number}: publication_date '{publication_date}' is not parseable."
         )
 
-    if normalized.get("game") is None:
+    game = normalized.get("game")
+    if game is None:
         warnings.append(f"Row {row_number}: missing game.")
+    elif not isinstance(game, str):
+        errors.append(f"Row {row_number}: game '{game}' must be a string.")
+    else:
+        canonical_game = _normalize_game_value(game)
+        if canonical_game not in ALLOWED_GAME_VALUES:
+            errors.append(
+                f"Row {row_number}: game '{game}' must be one of "
+                f"{sorted(ALLOWED_GAME_VALUES)}."
+            )
     if normalized.get("scope") is None:
         warnings.append(f"Row {row_number}: missing scope.")
 
     if isinstance(source_type, str) and isinstance(reliability_tier, str):
-        if source_type.startswith("community_") and reliability_tier in {"tier_1", "tier_2"}:
-            warnings.append(
-                f"Row {row_number}: community source_type '{source_type}' with high reliability_tier "
-                f"'{reliability_tier}' is suspicious."
+        allowed_tiers = ALLOWED_RELIABILITY_BY_SOURCE_TYPE.get(source_type)
+        if allowed_tiers is not None and reliability_tier not in allowed_tiers:
+            errors.append(
+                f"Row {row_number}: reliability_tier '{reliability_tier}' is invalid for "
+                f"source_type '{source_type}'. Allowed: {sorted(allowed_tiers)}."
             )
-        if source_type in {"official", "official_companion"} and reliability_tier == "tier_3":
+
+        # Optional warnings:
+        if source_type == "official_story" and reliability_tier != "tier_1":
             warnings.append(
-                f"Row {row_number}: official source_type '{source_type}' with low reliability_tier "
-                f"'{reliability_tier}' is suspicious."
+                f"Row {row_number}: source_type 'official_story' is strongest at tier_1 "
+                f"(found '{reliability_tier}')."
+            )
+        if source_type == "official_databank" and reliability_tier != "tier_1":
+            warnings.append(
+                f"Row {row_number}: source_type 'official_databank' is strongest at tier_1 "
+                f"(found '{reliability_tier}')."
+            )
+        if source_type == "community_wiki" and reliability_tier == "tier_3":
+            warnings.append(
+                f"Row {row_number}: source_type 'community_wiki' at tier_3 may be too low."
             )
 
     return normalized, errors, warnings
@@ -645,8 +725,8 @@ def validate_source_asset_row(
         not isinstance(asset_id, str) or not ASSET_ID_PATTERN.match(asset_id)
     ):
         errors.append(
-            f"Row {row_number}: asset_id '{asset_id}' must match project pattern "
-            "AST### or AST-###."
+            f"Row {row_number}: asset_id '{asset_id}' must match "
+            f"AST-{{DOMAIN}}-#### where DOMAIN is one of {ID_DOMAINS}."
         )
 
     source_id = normalized.get("source_id")

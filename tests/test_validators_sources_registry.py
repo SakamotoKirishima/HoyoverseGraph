@@ -18,6 +18,7 @@ def test_validate_sources_registry_prints_summary() -> None:
     workbook_path = REPO_ROOT / "docs" / "hoyoverse_ontology_v1.xlsm"
 
     parsed = read_ontology_workbook(workbook_path)
+
     valid_rows, errors, warnings = validate_sources_rows(parsed["sources_registry"])
 
     print("Validator output for sources_registry")

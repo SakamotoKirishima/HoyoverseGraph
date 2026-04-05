@@ -36,6 +36,8 @@ REQUIRED_SHEETS: tuple[str, ...] = (
     "source_assets",
 )
 
+SOURCES_REGISTRY_HEADERS: set[str] = {"source_id", "title", "source_type", "source_format"}
+
 
 def _is_empty_cell(value: Any) -> bool:
     """Return True when a worksheet cell value should be treated as empty."""
@@ -46,22 +48,57 @@ def _is_empty_cell(value: Any) -> bool:
     return False
 
 
-def parse_worksheet_rows(worksheet: Worksheet) -> list[dict[str, Any]]:
-    """Parse one worksheet into row dictionaries using row 1 as headers.
+def _find_header_row_index(
+    worksheet: Worksheet,
+    expected_headers: set[str],
+    max_scan_rows: int = 25,
+) -> int:
+    """Find 1-based header row index by matching expected header names.
 
-    Header names are preserved exactly as found in the first row.
-    Rows that are fully empty are skipped.
+    Falls back to row 1 when no matching row is found.
     """
-    rows_iter = worksheet.iter_rows(values_only=True)
-    header_row = next(rows_iter, None)
-    if header_row is None:
+    for row_index, row in enumerate(worksheet.iter_rows(values_only=True), start=1):
+        header_candidates = {
+            cell.strip()
+            for cell in row
+            if isinstance(cell, str) and cell.strip() != ""
+        }
+        if expected_headers.issubset(header_candidates):
+            return row_index
+        if row_index >= max_scan_rows:
+            break
+    return 1
+
+
+def parse_worksheet_rows(
+    worksheet: Worksheet,
+    *,
+    header_row_index: int = 1,
+    stop_at_first_empty_row: bool = False,
+) -> list[dict[str, Any]]:
+    """Parse one worksheet into row dictionaries using a header row.
+
+    Header names are preserved exactly as found in the header row.
+    Rows that are fully empty are skipped. When stop_at_first_empty_row is True,
+    parsing stops at the first fully empty row after data begins.
+    """
+    rows = list(worksheet.iter_rows(values_only=True))
+    if not rows:
         return []
 
+    if header_row_index < 1 or header_row_index > len(rows):
+        return []
+
+    header_row = rows[header_row_index - 1]
     headers = list(header_row)
     parsed_rows: list[dict[str, Any]] = []
+    started_data = False
 
-    for row in rows_iter:
-        if all(_is_empty_cell(cell) for cell in row):
+    for row in rows[header_row_index:]:
+        is_empty_row = all(_is_empty_cell(cell) for cell in row)
+        if is_empty_row:
+            if stop_at_first_empty_row and started_data:
+                break
             continue
 
         row_dict: dict[str, Any] = {}
@@ -73,6 +110,7 @@ def parse_worksheet_rows(worksheet: Worksheet) -> list[dict[str, Any]]:
 
         if row_dict:
             parsed_rows.append(row_dict)
+            started_data = True
 
     return parsed_rows
 
@@ -106,6 +144,15 @@ def read_ontology_workbook(workbook_path: str | Path) -> dict[str, list[dict[str
         if sheet_name not in available_sheet_names:
             continue
         worksheet = workbook[sheet_name]
-        parsed[sheet_name] = parse_worksheet_rows(worksheet)
+        header_row_index = 1
+        if sheet_name == "sources_registry":
+            header_row_index = _find_header_row_index(
+                worksheet, SOURCES_REGISTRY_HEADERS
+            )
+        parsed[sheet_name] = parse_worksheet_rows(
+            worksheet,
+            header_row_index=header_row_index,
+            stop_at_first_empty_row=True,
+        )
 
     return parsed
