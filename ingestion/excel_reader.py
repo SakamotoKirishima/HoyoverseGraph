@@ -1,9 +1,16 @@
 """Excel reading helpers for ingestion steps.
 
 Usage:
-    from ingestion.excel_reader import read_entities_workbook, read_sources_workbook
+    from ingestion.excel_reader import (
+        read_entities_workbook,
+        read_sources_workbook,
+        read_claims_workbook,
+    )
     entities_rows, entity_type_rows = read_entities_workbook("path/to/workbook.xlsx")
     sources_rows, source_assets_rows = read_sources_workbook("path/to/workbook.xlsx")
+    claims_rows, entities_rows, relationship_types_rows, sources_rows, source_assets_rows = (
+        read_claims_workbook("path/to/workbook.xlsx")
+    )
 
 This module does not perform validation or database writes.
 """
@@ -118,3 +125,61 @@ def read_sources_workbook(workbook_path: str | Path) -> tuple[list[dict[str, Any
     sources_rows = worksheet_to_dict_rows(workbook["sources_registry"])
     source_assets_rows = worksheet_to_dict_rows(workbook["source_assets"])
     return sources_rows, source_assets_rows
+
+
+def read_claims_workbook(
+    workbook_path: str | Path,
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+]:
+    """Read claims ingestion sheets from workbook.
+
+    This function expects:
+    - ``claims_seed``
+    - ``entities_seed``
+    - ``relationship_types``
+    - ``sources_registry``
+    - ``source_assets``
+
+    Returns:
+        Tuple of:
+        - claims_rows
+        - entities_rows
+        - relationship_types_rows
+        - sources_rows
+        - source_assets_rows
+
+    Raises:
+        ValueError: when required sheets are missing.
+    """
+    workbook = load_workbook(filename=Path(workbook_path), data_only=True, read_only=True)
+    required = (
+        "claims_seed",
+        "entities_seed",
+        "relationship_types",
+        "sources_registry",
+        "source_assets",
+    )
+    missing = [sheet for sheet in required if sheet not in workbook.sheetnames]
+    if missing:
+        raise ValueError(
+            f"Workbook is missing required sheet(s): {', '.join(missing)}. "
+            f"Required: {', '.join(required)}."
+        )
+
+    claims_rows = worksheet_to_dict_rows(workbook["claims_seed"])
+    entities_rows = worksheet_to_dict_rows(workbook["entities_seed"])
+    relationship_types_rows = worksheet_to_dict_rows(workbook["relationship_types"])
+    sources_rows = worksheet_to_dict_rows(workbook["sources_registry"])
+    source_assets_rows = worksheet_to_dict_rows(workbook["source_assets"])
+    return (
+        claims_rows,
+        entities_rows,
+        relationship_types_rows,
+        sources_rows,
+        source_assets_rows,
+    )
