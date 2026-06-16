@@ -180,10 +180,12 @@ class PageTitleResolver:
         self.cache[page_id] = title
         return title
 
+
 class PageUrlResolver:
     """
     Resolve Notion page ID -> its Notion URL (cached).
     """
+
     def __init__(self):
         self.cache: Dict[str, str] = {}
 
@@ -320,9 +322,7 @@ def write_md_note(out_dir: Path, title: str, frontmatter: Dict[str, Any]) -> Pat
 
 # -------------------- Main export (deduped + aliases) --------------------
 def export_deduped_obsidian_from_database_ids(
-        container_db_id: str,
-        entity_db_id: str,
-        out_dir: str
+    container_db_id: str, entity_db_id: str, out_dir: str
 ) -> None:
     """
     Accepts DATABASE IDs, discovers their data_source_ids, queries rows,
@@ -381,14 +381,16 @@ def export_deduped_obsidian_from_database_ids(
         for j in joins_names:
             all_names.add(j)
 
-        container_records.append({
-            "name": name,
-            "game": game,
-            "level": (level[0] if level else None),
-            "children": child_names,
-            "joins": joins_names,
-            "notes_ids": notes_ids
-        })
+        container_records.append(
+            {
+                "name": name,
+                "game": game,
+                "level": (level[0] if level else None),
+                "children": child_names,
+                "joins": joins_names,
+                "notes_ids": notes_ids,
+            }
+        )
 
         uf.add(name)
         for j in joins_names:
@@ -412,13 +414,15 @@ def export_deduped_obsidian_from_database_ids(
         for j in joins_names:
             all_names.add(j)
 
-        entity_records.append({
-            "name": name,
-            "game": game,
-            "parents": parent_names,
-            "joins": joins_names,
-            "notes_ids": notes_ids
-        })
+        entity_records.append(
+            {
+                "name": name,
+                "game": game,
+                "parents": parent_names,
+                "joins": joins_names,
+                "notes_ids": notes_ids,
+            }
+        )
 
         uf.add(name)
         for j in joins_names:
@@ -457,7 +461,6 @@ def export_deduped_obsidian_from_database_ids(
                 "children_set": set(),
                 "notes_ids": set(),
                 "notes_source": None,  # None | "container" | "entity"
-
             }
 
     for rec in container_records:

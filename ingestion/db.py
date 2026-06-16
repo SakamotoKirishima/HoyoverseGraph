@@ -376,9 +376,7 @@ def fetch_existing_ids(
 
     import psycopg
 
-    query = psycopg.sql.SQL(
-        "SELECT {id_col} FROM {table} WHERE {id_col} = ANY(%s)"
-    ).format(
+    query = psycopg.sql.SQL("SELECT {id_col} FROM {table} WHERE {id_col} = ANY(%s)").format(
         id_col=psycopg.sql.Identifier(id_column),
         table=psycopg.sql.Identifier(table_name),
     )

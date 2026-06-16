@@ -263,14 +263,14 @@ def validate_entity_row(
             errors.append(f"Row {row_number}: missing required field '{field}'.")
 
     entity_id = normalized.get("entity_id")
-    if entity_id is not None and (not isinstance(entity_id, str) or not ENTITY_ID_PATTERN.match(entity_id)):
+    if entity_id is not None and (
+        not isinstance(entity_id, str) or not ENTITY_ID_PATTERN.match(entity_id)
+    ):
         errors.append(f"Row {row_number}: entity_id '{entity_id}' must match ENT-####.")
 
     entity_type = normalized.get("entity_type")
     if isinstance(entity_type, str) and entity_type not in allowed_entity_types:
-        errors.append(
-            f"Row {row_number}: entity_type '{entity_type}' is not in entity_types."
-        )
+        errors.append(f"Row {row_number}: entity_type '{entity_type}' is not in entity_types.")
 
     starter_status = normalized.get("starter_status")
     if starter_status is not None:
@@ -340,9 +340,7 @@ def validate_entities_rows(
     for entity_id, row_numbers in id_to_rows.items():
         if len(row_numbers) > 1:
             duplicate_rows.update(row_numbers)
-            errors.append(
-                f"Duplicate entity_id '{entity_id}' found at rows {sorted(row_numbers)}."
-            )
+            errors.append(f"Duplicate entity_id '{entity_id}' found at rows {sorted(row_numbers)}.")
 
     for (canonical_name, entity_type), row_numbers in combo_to_rows.items():
         if len(row_numbers) > 1:
@@ -352,9 +350,7 @@ def validate_entities_rows(
                 f"('{canonical_name}', '{entity_type}') found at rows {sorted(row_numbers)}."
             )
 
-    valid_rows = [
-        row for row_number, row in valid_candidates if row_number not in duplicate_rows
-    ]
+    valid_rows = [row for row_number, row in valid_candidates if row_number not in duplicate_rows]
 
     return valid_rows, errors, warnings
 
@@ -391,7 +387,9 @@ def validate_claim_row(
             errors.append(f"Row {row_number}: missing required field '{field}'.")
 
     claim_id = normalized.get("claim_id")
-    if claim_id is not None and (not isinstance(claim_id, str) or not CLAIM_ID_PATTERN.match(claim_id)):
+    if claim_id is not None and (
+        not isinstance(claim_id, str) or not CLAIM_ID_PATTERN.match(claim_id)
+    ):
         errors.append(f"Row {row_number}: claim_id '{claim_id}' must match CLM-####.")
 
     subject_entity_id = normalized.get("subject_entity_id")
@@ -408,7 +406,9 @@ def validate_claim_row(
 
     source_id = normalized.get("source_id")
     if isinstance(source_id, str) and source_id not in valid_source_ids:
-        errors.append(f"Row {row_number}: source_id '{source_id}' does not exist in sources_registry.")
+        errors.append(
+            f"Row {row_number}: source_id '{source_id}' does not exist in sources_registry."
+        )
 
     asset_id = normalized.get("asset_id")
     if asset_id is not None:
@@ -419,9 +419,7 @@ def validate_claim_row(
 
     predicate = normalized.get("predicate")
     if isinstance(predicate, str) and predicate not in valid_predicates:
-        errors.append(
-            f"Row {row_number}: predicate '{predicate}' is not in relationship_types."
-        )
+        errors.append(f"Row {row_number}: predicate '{predicate}' is not in relationship_types.")
 
     confidence = normalized.get("confidence")
     if confidence is not None:
@@ -470,9 +468,7 @@ def validate_claims_rows(
     normalized_claim_rows = [_normalize_row_values(row) for row in claims_rows]
     valid_claim_ids = {
         claim_id
-        for claim_id in (
-            row.get("claim_id") for row in normalized_claim_rows
-        )
+        for claim_id in (row.get("claim_id") for row in normalized_claim_rows)
         if isinstance(claim_id, str) and CLAIM_ID_PATTERN.match(claim_id)
     }
 
@@ -520,9 +516,7 @@ def validate_claims_rows(
                 f"{claim_key} found at rows {sorted(row_numbers)}."
             )
 
-    valid_rows = [
-        row for row_number, row in valid_candidates if row_number not in duplicate_rows
-    ]
+    valid_rows = [row for row_number, row in valid_candidates if row_number not in duplicate_rows]
 
     return valid_rows, errors, warnings
 
@@ -575,7 +569,10 @@ def validate_source_row(
 
     reliability_tier = normalized.get("reliability_tier")
     if reliability_tier is not None:
-        if not isinstance(reliability_tier, str) or reliability_tier not in ALLOWED_RELIABILITY_TIERS:
+        if (
+            not isinstance(reliability_tier, str)
+            or reliability_tier not in ALLOWED_RELIABILITY_TIERS
+        ):
             errors.append(
                 f"Row {row_number}: reliability_tier '{reliability_tier}' must be one of "
                 f"{sorted(ALLOWED_RELIABILITY_TIERS)}."
@@ -592,9 +589,7 @@ def validate_source_row(
 
     publication_date = normalized.get("publication_date")
     if publication_date is not None and not _is_parseable_publication_date(publication_date):
-        errors.append(
-            f"Row {row_number}: publication_date '{publication_date}' is not parseable."
-        )
+        errors.append(f"Row {row_number}: publication_date '{publication_date}' is not parseable.")
 
     game = normalized.get("game")
     if game is None:
@@ -605,8 +600,7 @@ def validate_source_row(
         canonical_game = _normalize_game_value(game)
         if canonical_game not in ALLOWED_GAME_VALUES:
             errors.append(
-                f"Row {row_number}: game '{game}' must be one of "
-                f"{sorted(ALLOWED_GAME_VALUES)}."
+                f"Row {row_number}: game '{game}' must be one of {sorted(ALLOWED_GAME_VALUES)}."
             )
     if normalized.get("scope") is None:
         warnings.append(f"Row {row_number}: missing scope.")
@@ -670,16 +664,19 @@ def validate_sources_rows(
             source_id_to_rows.setdefault(source_id, []).append(row_number)
 
         if isinstance(title, str) and isinstance(source_type, str):
-            soft_key = (title, source_type, game if isinstance(game, str) else None, scope if isinstance(scope, str) else None)
+            soft_key = (
+                title,
+                source_type,
+                game if isinstance(game, str) else None,
+                scope if isinstance(scope, str) else None,
+            )
             soft_duplicate_key_to_rows.setdefault(soft_key, []).append(row_number)
 
     duplicate_rows: set[int] = set()
     for source_id, row_numbers in source_id_to_rows.items():
         if len(row_numbers) > 1:
             duplicate_rows.update(row_numbers)
-            errors.append(
-                f"Duplicate source_id '{source_id}' found at rows {sorted(row_numbers)}."
-            )
+            errors.append(f"Duplicate source_id '{source_id}' found at rows {sorted(row_numbers)}.")
 
     for soft_key, row_numbers in soft_duplicate_key_to_rows.items():
         if len(row_numbers) > 1:
@@ -688,9 +685,7 @@ def validate_sources_rows(
                 f"{soft_key} found at rows {sorted(row_numbers)}."
             )
 
-    valid_rows = [
-        row for row_number, row in valid_candidates if row_number not in duplicate_rows
-    ]
+    valid_rows = [row for row_number, row in valid_candidates if row_number not in duplicate_rows]
 
     return valid_rows, errors, warnings
 
@@ -759,7 +754,11 @@ def validate_source_asset_row(
     if normalized.get("description") is None:
         warnings.append(f"Row {row_number}: missing description.")
 
-    if isinstance(asset_type, str) and asset_type in TIMESTAMP_STYLE_ASSET_TYPES and locator is None:
+    if (
+        isinstance(asset_type, str)
+        and asset_type in TIMESTAMP_STYLE_ASSET_TYPES
+        and locator is None
+    ):
         warnings.append(
             f"Row {row_number}: missing locator for timestamp-style asset_type '{asset_type}'."
         )
@@ -820,8 +819,6 @@ def validate_source_assets_rows(
                 f"{key} found at rows {sorted(row_numbers)}."
             )
 
-    valid_rows = [
-        row for row_number, row in valid_candidates if row_number not in duplicate_rows
-    ]
+    valid_rows = [row for row_number, row in valid_candidates if row_number not in duplicate_rows]
 
     return valid_rows, errors, warnings

@@ -35,11 +35,14 @@ YAML_FENCE_RE = re.compile(r"^---\s*$", re.MULTILINE)
 
 # ---------- parsing helpers ----------
 
+
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="ignore")
 
+
 def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip()).lower()
+
 
 def split_frontmatter(md: str) -> Tuple[Dict[str, object], str]:
     if not md.startswith("---"):
@@ -50,7 +53,7 @@ def split_frontmatter(md: str) -> Tuple[Dict[str, object], str]:
     start = matches[0].end()
     end = matches[1].start()
     yaml_block = md[start:end].strip("\n")
-    body = md[matches[1].end():].lstrip("\n")
+    body = md[matches[1].end() :].lstrip("\n")
 
     fm: Dict[str, object] = {}
     cur_key: Optional[str] = None
@@ -74,7 +77,9 @@ def split_frontmatter(md: str) -> Tuple[Dict[str, object], str]:
                 fm[key] = []
                 cur_key = key
             else:
-                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                if (val.startswith('"') and val.endswith('"')) or (
+                    val.startswith("'") and val.endswith("'")
+                ):
                     val = val[1:-1]
                 fm[key] = val
                 cur_key = None
@@ -83,11 +88,13 @@ def split_frontmatter(md: str) -> Tuple[Dict[str, object], str]:
 
     return fm, body
 
+
 def extract_title(md: str, fallback: str) -> str:
     for line in md.splitlines():
         if line.startswith("# "):
             return line[2:].strip()
     return fallback
+
 
 def extract_children(body: str) -> List[str]:
     lines = body.splitlines()
@@ -104,7 +111,9 @@ def extract_children(body: str) -> List[str]:
                 out.append(m.group(1).strip())
     return out
 
+
 # ---------- build graph from existing notes ----------
+
 
 def index_notes(notes_dir: Path) -> Tuple[Dict[str, Path], Dict[str, str], Dict[str, List[str]]]:
     md_files = sorted(notes_dir.rglob("*.md"))
@@ -146,6 +155,7 @@ def index_notes(notes_dir: Path) -> Tuple[Dict[str, Path], Dict[str, str], Dict[
 
     return title_to_path, alias_to_title, edges
 
+
 def resolve_root(root: str, title_to_path: Dict[str, Path], alias_to_title: Dict[str, str]) -> str:
     r = alias_to_title.get(normalize(root))
     if r:
@@ -154,6 +164,7 @@ def resolve_root(root: str, title_to_path: Dict[str, Path], alias_to_title: Dict
         if normalize(t) == normalize(root):
             return t
     raise SystemExit(f"Could not resolve root term: {root!r}")
+
 
 def collect_subtree(root: str, edges: Dict[str, List[str]]) -> Set[str]:
     """All reachable descendants including root."""
@@ -168,18 +179,17 @@ def collect_subtree(root: str, edges: Dict[str, List[str]]) -> Set[str]:
                 stack.append(ch)
     return seen
 
+
 # ---------- write proxy notes ----------
+
 
 def safe_filename(name: str) -> str:
     # Obsidian is ok with many chars, but avoid path separators
     return name.replace("/", "∕").replace("\\", "∖").strip()
 
+
 def write_proxy_note(
-    out_dir: Path,
-    title: str,
-    real_rel_link: str,
-    children: List[str],
-    view_tag: str
+    out_dir: Path, title: str, real_rel_link: str, children: List[str], view_tag: str
 ) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{safe_filename(title)}.md"
@@ -199,14 +209,27 @@ def write_proxy_note(
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
 
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--notes-dir", required=True, help="Folder with your real exported term notes (e.g. Terms)")
+    ap.add_argument(
+        "--notes-dir", required=True, help="Folder with your real exported term notes (e.g. Terms)"
+    )
     ap.add_argument("--root", required=True, help="Root term (e.g. Schicksal)")
-    ap.add_argument("--out-dir", required=True, help="Output folder for proxy notes inside your vault (e.g. Views/Schicksal)")
-    ap.add_argument("--view-name", default=None, help="Optional name used in frontmatter (defaults to root)")
-    ap.add_argument("--terms-link-mode", choices=["relative", "wikilink"], default="wikilink",
-                    help="How the proxy links back to the real note: wikilink ([[Real Note]]) or relative markdown link")
+    ap.add_argument(
+        "--out-dir",
+        required=True,
+        help="Output folder for proxy notes inside your vault (e.g. Views/Schicksal)",
+    )
+    ap.add_argument(
+        "--view-name", default=None, help="Optional name used in frontmatter (defaults to root)"
+    )
+    ap.add_argument(
+        "--terms-link-mode",
+        choices=["relative", "wikilink"],
+        default="wikilink",
+        help="How the proxy links back to the real note: wikilink ([[Real Note]]) or relative markdown link",
+    )
     args = ap.parse_args()
 
     notes_dir = Path(args.notes_dir).expanduser()
@@ -238,7 +261,7 @@ def main():
             title=node,
             real_rel_link=real_link,
             children=proxy_edges[node],
-            view_tag=view_tag
+            view_tag=view_tag,
         )
         wrote += 1
 
@@ -261,6 +284,7 @@ def main():
     print(f"Wrote {wrote} proxy notes to: {out_dir}")
     print(f"View entry note: {entry}")
     print("In Obsidian Graph, filter by path to this folder to see the clean subtree graph.")
+
 
 if __name__ == "__main__":
     main()

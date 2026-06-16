@@ -72,7 +72,9 @@ def normalize_asset_create_payload(payload: Mapping[str, Any]) -> dict[str, Any]
         "locator": trim_or_none(payload.get("locator")),
         "description": trim_or_none(payload.get("description")),
         "is_primary_evidence": (
-            False if payload.get("is_primary_evidence") is None else payload.get("is_primary_evidence")
+            False
+            if payload.get("is_primary_evidence") is None
+            else payload.get("is_primary_evidence")
         ),
         "notes": trim_or_none(payload.get("notes")),
     }
@@ -145,17 +147,27 @@ def validate_asset_values(values: Mapping[str, Any]) -> list[str]:
     if file_path_or_url is None and locator is None:
         errors.append("At least one of file_path_or_url or locator must be provided.")
 
-    if isinstance(asset_type, str) and asset_type in TIMESTAMP_STYLE_ASSET_TYPES and locator is None:
+    if (
+        isinstance(asset_type, str)
+        and asset_type in TIMESTAMP_STYLE_ASSET_TYPES
+        and locator is None
+    ):
         errors.append(f"locator is required for asset_type '{asset_type}'.")
 
-    if isinstance(asset_type, str) and asset_type in FILE_LIKE_ASSET_TYPES and file_path_or_url is None:
+    if (
+        isinstance(asset_type, str)
+        and asset_type in FILE_LIKE_ASSET_TYPES
+        and file_path_or_url is None
+    ):
         errors.append(f"file_path_or_url is required for asset_type '{asset_type}'.")
 
     if isinstance(file_path_or_url, str):
         parsed = urlparse(file_path_or_url)
         # Validate URL only when value clearly looks like URL input.
-        if parsed.scheme or file_path_or_url.startswith("http://") or file_path_or_url.startswith(
-            "https://"
+        if (
+            parsed.scheme
+            or file_path_or_url.startswith("http://")
+            or file_path_or_url.startswith("https://")
         ):
             if not is_plausible_http_url(file_path_or_url):
                 errors.append("file_path_or_url must be a valid HTTP/HTTPS URL when URL-like.")

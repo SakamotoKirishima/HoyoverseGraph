@@ -101,7 +101,9 @@ def test_get_source_asset_valid_returns_200(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(source_assets, "_fetch_asset_by_id", lambda _c, _id: sample_asset_row)
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
 
     response = client.get("/source-assets/AST-GI-0001")
     assert response.status_code == 200
@@ -130,7 +132,9 @@ def test_get_source_asset_provenance_valid_returns_200(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(source_assets, "_fetch_asset_by_id", lambda _c, _id: sample_asset_row)
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
     monkeypatch.setattr(
         source_assets,
         "_fetch_provenance_claims_by_asset_id",
@@ -186,7 +190,9 @@ def test_create_source_asset_valid_returns_201(
     sample_asset_create_payload: dict[str, Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
     monkeypatch.setattr(source_assets, "generate_asset_id", lambda _c, domain: "AST-GI-0002")
     monkeypatch.setattr(
         source_assets,
@@ -251,7 +257,9 @@ def test_create_source_asset_uniqueness_conflict_returns_409(
     sample_source_summary: dict[str, Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
     monkeypatch.setattr(source_assets, "generate_asset_id", lambda _c, domain: "AST-GI-0002")
     monkeypatch.setattr(source_assets.pg_errors, "UniqueViolation", FakeUniqueViolation)
 
@@ -276,7 +284,9 @@ def test_update_source_asset_valid_partial_patch_returns_200(
         return {**sample_asset_row, **values, "asset_id": asset_id}
 
     monkeypatch.setattr(source_assets, "_fetch_asset_by_id", lambda _c, _id: sample_asset_row)
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
     monkeypatch.setattr(source_assets, "_update_asset", _fake_update)
 
     response = client.patch("/source-assets/AST-GI-0001", json={"notes": "Updated note"})
@@ -340,7 +350,9 @@ def test_update_source_asset_uniqueness_conflict_returns_409(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(source_assets, "_fetch_asset_by_id", lambda _c, _id: sample_asset_row)
-    monkeypatch.setattr(source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary)
+    monkeypatch.setattr(
+        source_assets, "_fetch_source_summary", lambda _c, _id: sample_source_summary
+    )
     monkeypatch.setattr(source_assets.pg_errors, "UniqueViolation", FakeUniqueViolation)
 
     def _raise(_c, *, asset_id, values):
