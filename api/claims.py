@@ -216,7 +216,11 @@ def _validate_confidence_bounds(
     confidence_max: float | None,
 ) -> list[str]:
     """Validate confidence range bounds for list filtering."""
-    if confidence_min is not None and confidence_max is not None and confidence_min > confidence_max:
+    if (
+        confidence_min is not None
+        and confidence_max is not None
+        and confidence_min > confidence_max
+    ):
         return ["confidence_min cannot be greater than confidence_max."]
     return []
 

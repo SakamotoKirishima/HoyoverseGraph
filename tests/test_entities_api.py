@@ -100,7 +100,9 @@ def test_get_by_slug_returns_200(
     assert response.json()["entity_id"] == "ENT-0121"
 
 
-def test_get_by_slug_missing_returns_404(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_by_slug_missing_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(entities, "_fetch_by_slug", lambda _c, _s: [])
     response = client.get("/entities/slug/missing-slug")
     assert response.status_code == 404
@@ -123,7 +125,9 @@ def test_lookup_resolves_canonical_display(
     sample_entity_row: dict[str, Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(entities, "_fetch_by_canonical_or_display", lambda _c, _v: [sample_entity_row])
+    monkeypatch.setattr(
+        entities, "_fetch_by_canonical_or_display", lambda _c, _v: [sample_entity_row]
+    )
     monkeypatch.setattr(entities, "_fetch_by_slug", lambda _c, _s: [])
     response = client.get("/entities/lookup/Raiden%20Shogun")
     assert response.status_code == 200
@@ -149,7 +153,9 @@ def test_lookup_ambiguous_returns_409(
 ) -> None:
     row2 = dict(sample_entity_row)
     row2["entity_id"] = "ENT-0999"
-    monkeypatch.setattr(entities, "_fetch_by_canonical_or_display", lambda _c, _v: [sample_entity_row, row2])
+    monkeypatch.setattr(
+        entities, "_fetch_by_canonical_or_display", lambda _c, _v: [sample_entity_row, row2]
+    )
     response = client.get("/entities/lookup/Raiden%20Shogun")
     assert response.status_code == 409
     detail = response.json()["detail"]
@@ -285,9 +291,7 @@ def test_create_invalid_primary_scope_game_returns_422(client: TestClient) -> No
     assert response.status_code == 422
 
 
-def test_create_duplicate_returns_409(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_create_duplicate_returns_409(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(entities.pg_errors, "UniqueViolation", FakeUniqueViolation)
     monkeypatch.setattr(entities, "generate_entity_id", lambda _c: "ENT-1000")
 
@@ -378,7 +382,9 @@ def test_update_uniqueness_conflict_returns_409(
     assert response.status_code == 409
 
 
-def test_update_nonexistent_returns_404(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_update_nonexistent_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(entities, "_fetch_by_entity_id", lambda _c, _id: None)
     response = client.patch("/entities/ENT-0121", json={"notes": "x"})
     assert response.status_code == 404
@@ -395,7 +401,9 @@ def test_delete_existing_unreferenced_returns_200(
     assert response.json() == {"deleted": True, "entity_id": "ENT-0121"}
 
 
-def test_delete_nonexistent_returns_404(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_delete_nonexistent_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(entities, "_entity_exists", lambda _c, _id: False)
     response = client.delete("/entities/ENT-0121")
     assert response.status_code == 404

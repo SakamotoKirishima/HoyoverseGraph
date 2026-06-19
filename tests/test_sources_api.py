@@ -114,7 +114,9 @@ def test_get_source_valid_returns_200(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(sources, "_fetch_source_by_id", lambda _c, _id: sample_source_row)
-    monkeypatch.setattr(sources, "_fetch_assets_by_source_id", lambda _c, _id: [sample_asset_summary])
+    monkeypatch.setattr(
+        sources, "_fetch_assets_by_source_id", lambda _c, _id: [sample_asset_summary]
+    )
     monkeypatch.setattr(
         sources,
         "_fetch_claim_summaries_by_source_id",
@@ -134,7 +136,9 @@ def test_get_source_malformed_id_returns_422(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_get_source_missing_returns_404(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_source_missing_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(sources, "_fetch_source_by_id", lambda _c, _id: None)
     response = client.get("/sources/SRC-GI-9999")
     assert response.status_code == 404

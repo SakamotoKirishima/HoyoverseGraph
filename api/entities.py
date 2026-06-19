@@ -662,9 +662,7 @@ def create_entity(
         if constraint_name == "uq_entities_canonical_name_entity_type":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Entity with the same (canonical_name, entity_type) already exists."
-                ),
+                detail=("Entity with the same (canonical_name, entity_type) already exists."),
             ) from exc
         if constraint_name == "entities_pkey":
             raise HTTPException(
@@ -732,9 +730,7 @@ def update_entity(
         if constraint_name == "uq_entities_canonical_name_entity_type":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Update would create duplicate (canonical_name, entity_type)."
-                ),
+                detail=("Update would create duplicate (canonical_name, entity_type)."),
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

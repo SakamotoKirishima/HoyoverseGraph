@@ -211,4 +211,3 @@ def merge_entity_patch(
 def validate_merged_entity_values(values: Mapping[str, Any]) -> list[str]:
     """Validate merged entity values for update flows."""
     return _validate_entity_values(values)
-

@@ -12,8 +12,10 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
+
 def _plain_text(rich_text_list) -> str:
     return "".join(x.get("plain_text", "") for x in (rich_text_list or [])).strip()
+
 
 def list_accessible_databases(page_size: int = 100) -> List[Tuple[str, str]]:
     """
@@ -48,6 +50,7 @@ def list_accessible_databases(page_size: int = 100) -> List[Tuple[str, str]]:
         payload["start_cursor"] = next_cursor
 
     return out
+
 
 if __name__ == "__main__":
     dbs = list_accessible_databases()

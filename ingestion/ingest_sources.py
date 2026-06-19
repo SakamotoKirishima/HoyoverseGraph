@@ -90,9 +90,7 @@ def normalize_sources_rows(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]
     normalized_rows: list[dict[str, Any]] = []
     for row in rows:
         row_copy = {k: _empty_to_none(v) for k, v in dict(row).items()}
-        row_copy["publication_date"] = _parse_publication_date(
-            row_copy.get("publication_date")
-        )
+        row_copy["publication_date"] = _parse_publication_date(row_copy.get("publication_date"))
         normalized_rows.append(row_copy)
     return normalized_rows
 

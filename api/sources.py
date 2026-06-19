@@ -219,7 +219,9 @@ def _derive_source_domain(values: dict[str, Any]) -> str:
     return "GEN"
 
 
-def _normalize_source_create_payload(payload: SourceCreateRequest) -> tuple[dict[str, Any], list[str]]:
+def _normalize_source_create_payload(
+    payload: SourceCreateRequest,
+) -> tuple[dict[str, Any], list[str]]:
     """Normalize and validate source create payload."""
     errors: list[str] = []
 
@@ -351,7 +353,9 @@ def _validate_source_values(values: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _merge_source_patch(current_row: dict[str, Any], patch_values: dict[str, Any]) -> dict[str, Any]:
+def _merge_source_patch(
+    current_row: dict[str, Any], patch_values: dict[str, Any]
+) -> dict[str, Any]:
     """Merge current source row with normalized patch values."""
     merged = {
         "title": current_row.get("title"),

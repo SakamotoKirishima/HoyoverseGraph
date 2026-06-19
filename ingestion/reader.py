@@ -59,9 +59,7 @@ def _find_header_row_index(
     """
     for row_index, row in enumerate(worksheet.iter_rows(values_only=True), start=1):
         header_candidates = {
-            cell.strip()
-            for cell in row
-            if isinstance(cell, str) and cell.strip() != ""
+            cell.strip() for cell in row if isinstance(cell, str) and cell.strip() != ""
         }
         if expected_headers.issubset(header_candidates):
             return row_index
@@ -146,9 +144,7 @@ def read_ontology_workbook(workbook_path: str | Path) -> dict[str, list[dict[str
         worksheet = workbook[sheet_name]
         header_row_index = 1
         if sheet_name == "sources_registry":
-            header_row_index = _find_header_row_index(
-                worksheet, SOURCES_REGISTRY_HEADERS
-            )
+            header_row_index = _find_header_row_index(worksheet, SOURCES_REGISTRY_HEADERS)
         parsed[sheet_name] = parse_worksheet_rows(
             worksheet,
             header_row_index=header_row_index,
