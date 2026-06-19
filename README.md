@@ -2,7 +2,31 @@
 
 This repository is used to create a visualization of all the terms and entities found in the hoyoverse honkai games.
 
-See [AGENTS.md](./AGENTS.md) for contributor and AI-agent coding/testing standards.
+## Development
+
+### Install pre-commit hooks
+
+```bash
+pre-commit install
+```
+
+### Run lint
+
+```bash
+ruff check .
+```
+
+### Run tests
+
+```bash
+pytest
+```
+
+### Run all pre-commit checks
+
+```bash
+pre-commit run --all-files
+```
 
 ## API (Entity Read Endpoint)
 

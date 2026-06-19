@@ -71,7 +71,9 @@ def worksheet_to_dict_rows(worksheet: Worksheet) -> list[dict[str, Any]]:
     return parsed_rows
 
 
-def read_entities_workbook(workbook_path: str | Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def read_entities_workbook(
+    workbook_path: str | Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Read entities_seed + entity_types sheets from workbook.
 
     This function expects:
@@ -99,7 +101,9 @@ def read_entities_workbook(workbook_path: str | Path) -> tuple[list[dict[str, An
     return entities_rows, entity_type_rows
 
 
-def read_sources_workbook(workbook_path: str | Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def read_sources_workbook(
+    workbook_path: str | Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Read sources_registry + source_assets sheets from workbook.
 
     This function expects:

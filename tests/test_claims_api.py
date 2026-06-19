@@ -374,7 +374,9 @@ def test_create_source_asset_mismatch_returns_422(
     monkeypatch.setattr(
         claims,
         "_validate_reference_ids",
-        lambda _c, _v: ["asset_id 'AST-HSR-0001' belongs to source_id 'SRC-GI-0002', not 'SRC-HSR-0001'."],
+        lambda _c, _v: [
+            "asset_id 'AST-HSR-0001' belongs to source_id 'SRC-GI-0002', not 'SRC-HSR-0001'."
+        ],
     )
     response = client.post("/claims", json=sample_create_payload)
     assert response.status_code == 422
@@ -498,7 +500,9 @@ def test_update_invalid_source_asset_mismatch_returns_422(
     monkeypatch.setattr(
         claims,
         "_validate_reference_ids",
-        lambda _c, _v: ["asset_id 'AST-HSR-0001' belongs to source_id 'SRC-GI-0002', not 'SRC-HSR-0001'."],
+        lambda _c, _v: [
+            "asset_id 'AST-HSR-0001' belongs to source_id 'SRC-GI-0002', not 'SRC-HSR-0001'."
+        ],
     )
     response = client.patch("/claims/CLM-0121", json={"asset_id": "AST-HSR-0001"})
     assert response.status_code == 422
