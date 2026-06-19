@@ -5,3 +5,9 @@ line-length = 100
 # Keep the initial rule set conservative so pre-commit can be adopted
 # without forcing broad cleanup across the repository.
 select = ["E9", "F63", "F7", "F82"]
+# Keep the initial lint gate conservative so we can add CI without forcing
+# broad cleanup or formatting changes across the repo yet.
+select = ["E9", "F63", "F7", "F82"]
+
+[format]
+exclude = [".venv", ".git", "__pycache__"]
