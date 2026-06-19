@@ -2,13 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import sys
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
+import pytest
 from api import source_asset_validation as sav
 
 
@@ -106,6 +100,19 @@ def test_timestamp_style_without_locator_fails() -> None:
         "source_id": "SRC-GEN-0001",
         "asset_type": "video_reference",
         "file_path_or_url": "https://example.com/video",
+        "locator": None,
+        "is_primary_evidence": False,
+    }
+    errors = sav.validate_asset_values(values)
+    assert any("locator is required" in err for err in errors)
+
+
+@pytest.mark.parametrize("asset_type", ["audio", "transcript_excerpt"])
+def test_other_timestamp_style_assets_without_locator_fail(asset_type: str) -> None:
+    values = {
+        "source_id": "SRC-GEN-0001",
+        "asset_type": asset_type,
+        "file_path_or_url": "/tmp/reference.txt",
         "locator": None,
         "is_primary_evidence": False,
     }
