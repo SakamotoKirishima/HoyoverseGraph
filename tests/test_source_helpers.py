@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import sys
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+import pytest
 
 from api import source_validation as sv
 from api import sources
@@ -92,6 +87,19 @@ def test_url_requirement_wiki_with_null_url_fails() -> None:
         source_type="community_wiki",
         source_format="wiki",
         reliability_tier="tier_2",
+    )
+    _normalized, errors = sources._normalize_source_create_payload(payload)
+    assert any("url is required" in err for err in errors)
+
+
+@pytest.mark.parametrize("source_format", ["article", "video", "trailer"])
+def test_url_requirement_web_like_formats_with_null_url_fail(source_format: str) -> None:
+    payload = sources.SourceCreateRequest(
+        title="Web-like source",
+        url=None,
+        source_type="other",
+        source_format=source_format,
+        reliability_tier="tier_3",
     )
     _normalized, errors = sources._normalize_source_create_payload(payload)
     assert any("url is required" in err for err in errors)
