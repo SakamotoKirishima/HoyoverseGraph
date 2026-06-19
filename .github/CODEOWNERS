@@ -1,0 +1,9 @@
+# Default ownership for the repository.
+# This can be refined later as collaborators or teams are added.
+
+* @SakamotoKirishima
+
+# Future examples:
+# /api/ @backend-team
+# /tests/ @qa-team
+# /docs/ @docs-team
