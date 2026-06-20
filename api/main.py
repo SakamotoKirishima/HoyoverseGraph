@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.claims import router as claims_router
 from api.graph import router as graph_router
 from api.entities import router as entities_router
+from api.search import router as search_router
 from api.source_assets import router as source_assets_router
 from api.sources import router as sources_router
 
