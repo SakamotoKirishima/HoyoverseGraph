@@ -3,15 +3,11 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HoYoverse Graph Search",
-  description: "Search entities in the HoYoverse knowledge graph.",
+  title: "Hoyoverse Graph",
+  description: "Internal tools for exploring Hoyoverse knowledge graph data.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>
