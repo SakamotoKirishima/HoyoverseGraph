@@ -43,5 +43,6 @@ def health() -> dict[str, str]:
 app.include_router(entities_router)
 app.include_router(claims_router)
 app.include_router(graph_router)
+app.include_router(search_router)
 app.include_router(sources_router)
 app.include_router(source_assets_router)
