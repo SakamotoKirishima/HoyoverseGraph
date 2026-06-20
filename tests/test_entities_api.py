@@ -89,6 +89,241 @@ def test_get_by_missing_entity_id_returns_404(
     assert response.status_code == 404
 
 
+def test_get_entity_detail_returns_expected_shape(
+    client: TestClient,
+    sample_entity_row: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim_rows = [
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0121",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0003",
+            "evidence_status": "official_confirmed",
+            "confidence": 0.9,
+            "source_id": "SRC-GI-0001",
+            "asset_id": "AST-GI-0001",
+            "locator": None,
+            "note": "Supported by primary story source.",
+            "review_status": "approved",
+            "claim_status": "active",
+            "supersedes_claim_id": None,
+            "contradicts_claim_id": None,
+            "direction": "outgoing",
+        }
+    ]
+    source_rows = [
+        {
+            "source_id": "SRC-GI-0001",
+            "title": "Genshin Impact Story",
+            "url": None,
+            "source_type": "official_story",
+            "source_format": "game",
+            "game": "Genshin Impact",
+            "scope": "primary_canon",
+            "reliability_tier": "tier_1",
+            "language": "en",
+            "publication_date": None,
+            "notes": None,
+        }
+    ]
+    asset_rows = [
+        {
+            "asset_id": "AST-GI-0001",
+            "source_id": "SRC-GI-0001",
+            "asset_type": "screenshot",
+            "file_path_or_url": None,
+            "locator": "Chapter 1",
+            "description": "Story screenshot",
+            "is_primary_evidence": True,
+            "notes": None,
+        }
+    ]
+
+    monkeypatch.setattr(entities, "_fetch_by_entity_id", lambda _c, _id: sample_entity_row)
+    monkeypatch.setattr(entities, "_fetch_entity_claims", lambda _c, _id: claim_rows)
+    monkeypatch.setattr(entities, "_fetch_sources_by_ids", lambda _c, _ids: source_rows)
+    monkeypatch.setattr(entities, "_fetch_assets_by_ids", lambda _c, _ids: asset_rows)
+
+    response = client.get("/entities/ENT-0121/detail")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["entity"]["entity_id"] == "ENT-0121"
+    assert body["entity"]["aliases"] == ["Ei", "Raiden Ei"]
+    assert "aliases_pipe_delimited" not in body["entity"]
+    assert body["claims"][0]["direction"] == "outgoing"
+    assert body["sources"][0]["source_id"] == "SRC-GI-0001"
+    assert body["assets"][0]["asset_id"] == "AST-GI-0001"
+    assert body["graph_context"] == {
+        "seed_entity_id": "ENT-0121",
+        "graph_url": "/graph?seed_entity_id=ENT-0121&depth=1",
+        "related_claim_count": 1,
+        "related_entity_count": 1,
+        "source_count": 1,
+        "asset_count": 1,
+    }
+
+
+def test_get_entity_detail_malformed_id_returns_422(client: TestClient) -> None:
+    response = client.get("/entities/123/detail")
+    assert response.status_code == 422
+
+
+def test_get_entity_detail_missing_entity_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(entities, "_fetch_by_entity_id", lambda _c, _id: None)
+    response = client.get("/entities/ENT-9999/detail")
+    assert response.status_code == 404
+
+
+def test_get_entity_detail_incoming_claim_direction(
+    client: TestClient,
+    sample_entity_row: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim_rows = [
+        {
+            "claim_id": "CLM-0002",
+            "subject_entity_id": "ENT-0003",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0121",
+            "evidence_status": None,
+            "confidence": None,
+            "source_id": None,
+            "asset_id": None,
+            "locator": None,
+            "note": None,
+            "review_status": None,
+            "claim_status": "active",
+            "supersedes_claim_id": None,
+            "contradicts_claim_id": None,
+            "direction": "incoming",
+        }
+    ]
+    monkeypatch.setattr(entities, "_fetch_by_entity_id", lambda _c, _id: sample_entity_row)
+    monkeypatch.setattr(entities, "_fetch_entity_claims", lambda _c, _id: claim_rows)
+    monkeypatch.setattr(entities, "_fetch_sources_by_ids", lambda _c, _ids: [])
+    monkeypatch.setattr(entities, "_fetch_assets_by_ids", lambda _c, _ids: [])
+
+    response = client.get("/entities/ENT-0121/detail")
+    assert response.status_code == 200
+    assert response.json()["claims"][0]["direction"] == "incoming"
+
+
+def test_get_entity_detail_dedupes_sources_and_assets_and_excludes_nulls(
+    client: TestClient,
+    sample_entity_row: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim_rows = [
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0121",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0003",
+            "evidence_status": None,
+            "confidence": 0.8,
+            "source_id": "SRC-GI-0001",
+            "asset_id": "AST-GI-0001",
+            "locator": None,
+            "note": None,
+            "review_status": None,
+            "claim_status": "active",
+            "supersedes_claim_id": None,
+            "contradicts_claim_id": None,
+            "direction": "outgoing",
+        },
+        {
+            "claim_id": "CLM-0002",
+            "subject_entity_id": "ENT-0004",
+            "predicate": "knows",
+            "object_entity_id": "ENT-0121",
+            "evidence_status": None,
+            "confidence": 0.7,
+            "source_id": "SRC-GI-0001",
+            "asset_id": "AST-GI-0001",
+            "locator": None,
+            "note": None,
+            "review_status": None,
+            "claim_status": "active",
+            "supersedes_claim_id": None,
+            "contradicts_claim_id": None,
+            "direction": "incoming",
+        },
+        {
+            "claim_id": "CLM-0003",
+            "subject_entity_id": "ENT-0121",
+            "predicate": "related_to",
+            "object_entity_id": "ENT-0005",
+            "evidence_status": None,
+            "confidence": 0.6,
+            "source_id": None,
+            "asset_id": None,
+            "locator": None,
+            "note": None,
+            "review_status": None,
+            "claim_status": "active",
+            "supersedes_claim_id": None,
+            "contradicts_claim_id": None,
+            "direction": "outgoing",
+        },
+    ]
+
+    captured: dict[str, Any] = {}
+
+    def _fake_fetch_sources(_c, source_ids):
+        captured["source_ids"] = source_ids
+        return [
+            {
+                "source_id": "SRC-GI-0001",
+                "title": "Genshin Impact Story",
+                "url": None,
+                "source_type": "official_story",
+                "source_format": "game",
+                "game": "Genshin Impact",
+                "scope": "primary_canon",
+                "reliability_tier": "tier_1",
+                "language": "en",
+                "publication_date": None,
+                "notes": None,
+            }
+        ]
+
+    def _fake_fetch_assets(_c, asset_ids):
+        captured["asset_ids"] = asset_ids
+        return [
+            {
+                "asset_id": "AST-GI-0001",
+                "source_id": "SRC-GI-0001",
+                "asset_type": "screenshot",
+                "file_path_or_url": None,
+                "locator": "Chapter 1",
+                "description": "Story screenshot",
+                "is_primary_evidence": True,
+                "notes": None,
+            }
+        ]
+
+    monkeypatch.setattr(entities, "_fetch_by_entity_id", lambda _c, _id: sample_entity_row)
+    monkeypatch.setattr(entities, "_fetch_entity_claims", lambda _c, _id: claim_rows)
+    monkeypatch.setattr(entities, "_fetch_sources_by_ids", _fake_fetch_sources)
+    monkeypatch.setattr(entities, "_fetch_assets_by_ids", _fake_fetch_assets)
+
+    response = client.get("/entities/ENT-0121/detail")
+    assert response.status_code == 200
+    body = response.json()
+    assert captured["source_ids"] == ["SRC-GI-0001"]
+    assert captured["asset_ids"] == ["AST-GI-0001"]
+    assert len(body["sources"]) == 1
+    assert len(body["assets"]) == 1
+    assert body["graph_context"]["related_claim_count"] == 3
+    assert body["graph_context"]["related_entity_count"] == 3
+    assert body["graph_context"]["source_count"] == 1
+    assert body["graph_context"]["asset_count"] == 1
+
+
 def test_get_by_slug_returns_200(
     client: TestClient,
     sample_entity_row: dict[str, Any],

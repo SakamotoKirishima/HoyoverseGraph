@@ -87,6 +87,162 @@ main {
   text-decoration: none;
 }
 
+.hero-link-secondary {
+  background: transparent;
+  color: var(--accent-dark);
+  border: 1px solid var(--line);
+}
+
+.panel {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 253, 247, 0.95);
+  box-shadow: var(--shadow);
+}
+
+.shell {
+  display: grid;
+  gap: 0;
+}
+
+.eyebrow {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+}
+
+.page-title {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 3.5rem);
+  line-height: 1;
+}
+
+.lead {
+  color: var(--muted);
+  max-width: 72ch;
+}
+
+.message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.error {
+  color: var(--error);
+}
+
+.results-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 16px;
+  color: var(--muted);
+}
+
+.results {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 253, 247, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+
+.card-link {
+  text-decoration: none;
+}
+
+.card-link:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--accent-dark);
+}
+
+.external-link {
+  color: var(--accent-dark);
+  text-decoration: underline;
+}
+
+.meta-row,
+.aliases,
+.description,
+.chip-row {
+  margin-top: 10px;
+}
+
+.meta-row,
+.aliases,
+.description {
+  color: var(--muted);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--panel-strong);
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.subtle-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  cursor: pointer;
+  padding: 0;
+}
+
+.search-form {
+  display: grid;
+  gap: 16px;
+}
+
+.field-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.label {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.control {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffdf8;
+}
+
+.detail-section {
+  margin-top: 24px;
+}
+
 .graph-shell {
   display: grid;
   gap: 18px;
@@ -207,6 +363,21 @@ main {
 .detail-card h3 {
   margin: 0 0 10px;
   font-size: 1.1rem;
+}
+
+.provenance-card {
+  display: grid;
+  gap: 16px;
+}
+
+.provenance-block {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.provenance-block h4 {
+  margin: 0 0 10px;
+  font-size: 1rem;
 }
 
 .detail-list {
