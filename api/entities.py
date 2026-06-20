@@ -10,7 +10,7 @@ Current scope:
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from fastapi.responses import JSONResponse
@@ -110,6 +110,90 @@ class EntityDeleteConflictResponse(BaseModel):
     subject_references: int
     object_references: int
     total_references: int
+
+
+class EntityDetailEntity(BaseModel):
+    """Canonical entity payload for detail pages."""
+
+    entity_id: str
+    canonical_name: str
+    display_label: str | None = None
+    entity_type: str
+    primary_scope_game: str | None = None
+    aliases: list[str] = Field(default_factory=list)
+    short_description: str | None = None
+    starter_status: str | None = None
+    notes: str | None = None
+
+
+class EntityDetailClaimSummary(BaseModel):
+    """Claim summary payload for entity detail pages."""
+
+    claim_id: str
+    subject_entity_id: str
+    predicate: str
+    object_entity_id: str
+    evidence_status: str | None = None
+    confidence: float | None = None
+    source_id: str | None = None
+    asset_id: str | None = None
+    locator: str | None = None
+    note: str | None = None
+    review_status: str | None = None
+    claim_status: str | None = None
+    supersedes_claim_id: str | None = None
+    contradicts_claim_id: str | None = None
+    direction: Literal["outgoing", "incoming"]
+
+
+class EntityDetailSourceSummary(BaseModel):
+    """Source summary payload for entity detail pages."""
+
+    source_id: str
+    title: str
+    url: str | None = None
+    source_type: str
+    source_format: str
+    game: str | None = None
+    scope: str | None = None
+    reliability_tier: str | None = None
+    language: str | None = None
+    publication_date: str | None = None
+    notes: str | None = None
+
+
+class EntityDetailAssetSummary(BaseModel):
+    """Asset summary payload for entity detail pages."""
+
+    asset_id: str
+    source_id: str
+    asset_type: str
+    file_path_or_url: str | None = None
+    locator: str | None = None
+    description: str | None = None
+    is_primary_evidence: bool | None = None
+    notes: str | None = None
+
+
+class EntityGraphContext(BaseModel):
+    """Lightweight graph-link context for entity detail pages."""
+
+    seed_entity_id: str
+    graph_url: str
+    related_claim_count: int
+    related_entity_count: int
+    source_count: int
+    asset_count: int
+
+
+class EntityDetailResponse(BaseModel):
+    """Consolidated entity detail response."""
+
+    entity: EntityDetailEntity
+    claims: list[EntityDetailClaimSummary]
+    sources: list[EntityDetailSourceSummary]
+    assets: list[EntityDetailAssetSummary]
+    graph_context: EntityGraphContext
 
 
 def _slugify(value: str) -> str:
@@ -511,6 +595,182 @@ def _row_to_create_response(row: dict[str, Any]) -> EntityCreateResponse:
     )
 
 
+def _row_to_detail_entity(row: dict[str, Any]) -> EntityDetailEntity:
+    """Map a DB entity row to detail entity payload."""
+    return EntityDetailEntity(
+        entity_id=row["entity_id"],
+        canonical_name=row["canonical_name"],
+        display_label=row.get("display_label"),
+        entity_type=row["entity_type"],
+        primary_scope_game=row.get("primary_scope_game"),
+        aliases=deserialize_aliases(row.get("aliases_pipe_delimited")),
+        short_description=row.get("short_description"),
+        starter_status=row.get("starter_status"),
+        notes=row.get("notes"),
+    )
+
+
+def _fetch_entity_claims(conn: Connection[Any], entity_id: str) -> list[dict[str, Any]]:
+    """Fetch claims connected to the entity with incoming/outgoing direction."""
+    sql = """
+        SELECT
+            claim_id,
+            subject_entity_id,
+            predicate,
+            object_entity_id,
+            evidence_status,
+            confidence,
+            source_id,
+            asset_id,
+            locator,
+            note,
+            review_status,
+            claim_status,
+            supersedes_claim_id,
+            contradicts_claim_id,
+            CASE
+                WHEN subject_entity_id = %(entity_id)s THEN 'outgoing'
+                ELSE 'incoming'
+            END AS direction
+        FROM claims
+        WHERE subject_entity_id = %(entity_id)s OR object_entity_id = %(entity_id)s
+        ORDER BY claim_id ASC;
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"entity_id": entity_id})
+        rows = cur.fetchall()
+    return rows if rows is not None else []
+
+
+def _fetch_sources_by_ids(conn: Connection[Any], source_ids: list[str]) -> list[dict[str, Any]]:
+    """Fetch deduplicated source rows by source_id."""
+    if not source_ids:
+        return []
+
+    sql = """
+        SELECT
+            source_id,
+            title,
+            url,
+            source_type,
+            source_format,
+            game,
+            scope,
+            reliability_tier,
+            language,
+            publication_date,
+            notes
+        FROM sources
+        WHERE source_id = ANY(%(source_ids)s)
+        ORDER BY source_id ASC;
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"source_ids": source_ids})
+        rows = cur.fetchall()
+    return rows if rows is not None else []
+
+
+def _fetch_assets_by_ids(conn: Connection[Any], asset_ids: list[str]) -> list[dict[str, Any]]:
+    """Fetch deduplicated asset rows by asset_id."""
+    if not asset_ids:
+        return []
+
+    sql = """
+        SELECT
+            asset_id,
+            source_id,
+            asset_type,
+            file_path_or_url,
+            locator,
+            description,
+            is_primary_evidence,
+            notes
+        FROM source_assets
+        WHERE asset_id = ANY(%(asset_ids)s)
+        ORDER BY asset_id ASC;
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"asset_ids": asset_ids})
+        rows = cur.fetchall()
+    return rows if rows is not None else []
+
+
+def _row_to_detail_claim(row: dict[str, Any]) -> EntityDetailClaimSummary:
+    """Map a claim row to entity detail claim payload."""
+    return EntityDetailClaimSummary(
+        claim_id=row["claim_id"],
+        subject_entity_id=row["subject_entity_id"],
+        predicate=row["predicate"],
+        object_entity_id=row["object_entity_id"],
+        evidence_status=row.get("evidence_status"),
+        confidence=row.get("confidence"),
+        source_id=row.get("source_id"),
+        asset_id=row.get("asset_id"),
+        locator=row.get("locator"),
+        note=row.get("note"),
+        review_status=row.get("review_status"),
+        claim_status=row.get("claim_status"),
+        supersedes_claim_id=row.get("supersedes_claim_id"),
+        contradicts_claim_id=row.get("contradicts_claim_id"),
+        direction=row["direction"],
+    )
+
+
+def _row_to_detail_source(row: dict[str, Any]) -> EntityDetailSourceSummary:
+    """Map a source row to entity detail source payload."""
+    publication_date = row.get("publication_date")
+    return EntityDetailSourceSummary(
+        source_id=row["source_id"],
+        title=row["title"],
+        url=row.get("url"),
+        source_type=row["source_type"],
+        source_format=row["source_format"],
+        game=row.get("game"),
+        scope=row.get("scope"),
+        reliability_tier=row.get("reliability_tier"),
+        language=row.get("language"),
+        publication_date=publication_date.isoformat() if publication_date is not None else None,
+        notes=row.get("notes"),
+    )
+
+
+def _row_to_detail_asset(row: dict[str, Any]) -> EntityDetailAssetSummary:
+    """Map an asset row to entity detail asset payload."""
+    return EntityDetailAssetSummary(
+        asset_id=row["asset_id"],
+        source_id=row["source_id"],
+        asset_type=row["asset_type"],
+        file_path_or_url=row.get("file_path_or_url"),
+        locator=row.get("locator"),
+        description=row.get("description"),
+        is_primary_evidence=row.get("is_primary_evidence"),
+        notes=row.get("notes"),
+    )
+
+
+def _build_entity_graph_context(
+    entity_id: str,
+    claims: list[dict[str, Any]],
+    sources: list[dict[str, Any]],
+    assets: list[dict[str, Any]],
+) -> EntityGraphContext:
+    """Build lightweight graph context metadata for the entity detail page."""
+    related_entity_ids = {
+        row["object_entity_id"] if row["subject_entity_id"] == entity_id else row["subject_entity_id"]
+        for row in claims
+    }
+    related_entity_ids.discard(entity_id)
+
+    return EntityGraphContext(
+        seed_entity_id=entity_id,
+        graph_url=f"/graph?seed_entity_id={entity_id}&depth=1",
+        related_claim_count=len(claims),
+        related_entity_count=len(related_entity_ids),
+        source_count=len(sources),
+        asset_count=len(assets),
+    )
+
+
 @router.get("", response_model=list[EntityCreateResponse])
 def list_entities(
     entity_type: str | None = Query(default=None),
@@ -573,6 +833,64 @@ def lookup_entity(
     try:
         row = _resolve_entity_by_lookup_value(conn, value)
         return _row_to_create_response(row)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected database error: {exc}",
+        ) from exc
+
+
+@router.get("/{entity_id}/detail", response_model=EntityDetailResponse)
+def get_entity_detail(
+    entity_id: str = Path(
+        ...,
+        pattern=r"^ENT-\d{4}$",
+        description="Entity ID in ENT-#### format.",
+    ),
+    conn: Connection[Any] = Depends(get_db_connection),
+) -> EntityDetailResponse:
+    """Return consolidated entity detail data for detail pages."""
+    try:
+        entity_row = _fetch_by_entity_id(conn, entity_id)
+        if entity_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Entity not found for id '{entity_id}'.",
+            )
+
+        claim_rows = _fetch_entity_claims(conn, entity_id)
+        source_ids = sorted(
+            {
+                source_id
+                for source_id in (row.get("source_id") for row in claim_rows)
+                if source_id is not None
+            }
+        )
+        asset_ids = sorted(
+            {
+                asset_id
+                for asset_id in (row.get("asset_id") for row in claim_rows)
+                if asset_id is not None
+            }
+        )
+
+        source_rows = _fetch_sources_by_ids(conn, source_ids)
+        asset_rows = _fetch_assets_by_ids(conn, asset_ids)
+
+        return EntityDetailResponse(
+            entity=_row_to_detail_entity(entity_row),
+            claims=[_row_to_detail_claim(row) for row in claim_rows],
+            sources=[_row_to_detail_source(row) for row in source_rows],
+            assets=[_row_to_detail_asset(row) for row in asset_rows],
+            graph_context=_build_entity_graph_context(
+                entity_id,
+                claim_rows,
+                source_rows,
+                asset_rows,
+            ),
+        )
     except HTTPException:
         raise
     except Exception as exc:

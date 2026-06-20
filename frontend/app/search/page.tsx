@@ -1,6 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -64,7 +66,7 @@ function getErrorMessage(error: unknown): string {
   return "Search failed. Please try again.";
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -285,7 +287,11 @@ export default function SearchPage() {
 
             return (
               <article className="card" key={result.entity_id}>
-                <h2>{title}</h2>
+                <h2>
+                  <Link className="card-link" href={`/entities/${result.entity_id}`}>
+                    {title}
+                  </Link>
+                </h2>
                 <div className="meta-row">
                   {result.entity_id} · {result.entity_type}
                   {result.primary_scope_game ? ` · ${result.primary_scope_game}` : ""}
@@ -302,13 +308,19 @@ export default function SearchPage() {
                 <div className="chip-row">
                   <span className="chip">Sources: {result.source_count}</span>
                 </div>
-
-                {/* TODO: Link cards to entity detail pages once frontend entity routes exist. */}
               </article>
             );
           })}
         </div>
       </section>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<main className="shell"><section className="panel"><p className="message">Preparing search page...</p></section></main>}>
+      <SearchPageContent />
+    </Suspense>
   );
 }
