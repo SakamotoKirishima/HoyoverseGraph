@@ -50,6 +50,33 @@ npm install
 npm run dev
 ```
 
+## Frontend Development
+
+Install dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Build the production bundle:
+
+```bash
+npm run build
+```
+
+Run lint:
+
+```bash
+npm run lint
+```
+
 ### Run all pre-commit checks
 
 ```bash

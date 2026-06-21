@@ -28,6 +28,22 @@ Standard pre-commit command:
 pre-commit run --all-files
 ```
 
+## Frontend Commands
+
+- Always run frontend commands from `frontend/`.
+- Use `npm`, not `yarn`.
+- Before opening a PR for frontend changes, run:
+
+```bash
+npm run build
+npm run lint
+```
+
+- Build failures must be fixed before merge.
+- Frontend CI checks:
+  - `frontend-build`
+  - `frontend-lint`
+
 ## Testing Standards
 
 - All new features should include unit tests.
