@@ -22,6 +22,21 @@ node --version
 npm --version
 ```
 
+## Environment Setup
+
+Create local environment files from the checked-in examples:
+
+```bash
+cp .env.example .env
+cp frontend/.env.example frontend/.env.local
+```
+
+Start local Postgres:
+
+```bash
+docker compose up -d
+```
+
 ## Development
 
 ### Install pre-commit hooks
@@ -40,6 +55,15 @@ ruff check .
 
 ```bash
 pytest
+```
+
+### Run the backend
+
+Install Python dependencies and start the API:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m uvicorn api.main:app --reload
 ```
 
 ### Run the frontend
@@ -81,6 +105,18 @@ npm run lint
 
 ```bash
 pre-commit run --all-files
+```
+
+## Empty Clone Checklist
+
+```bash
+python -m pip install -r requirements-dev.txt
+cd frontend && npm install && cd ..
+cp .env.example .env
+cp frontend/.env.example frontend/.env.local
+docker compose up -d
+python -m uvicorn api.main:app --reload
+cd frontend && npm run dev
 ```
 
 ## API (Entity Read Endpoint)
