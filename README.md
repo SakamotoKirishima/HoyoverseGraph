@@ -62,6 +62,7 @@ pytest
 Install Python dependencies and start the API:
 
 ```bash
+python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 python -m uvicorn api.main:app --reload
 ```
@@ -110,6 +111,7 @@ pre-commit run --all-files
 ## Empty Clone Checklist
 
 ```bash
+python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 cd frontend && npm install && cd ..
 cp .env.example .env
