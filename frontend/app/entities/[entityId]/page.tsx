@@ -1,11 +1,13 @@
 import { EntityDetailView } from "../../../components/EntityDetailView";
 
 type EntityDetailPageProps = {
-  params: {
+  params: Promise<{
     entityId: string;
-  };
+  }>;
 };
 
-export default function EntityDetailPage({ params }: EntityDetailPageProps) {
-  return <EntityDetailView entityId={params.entityId} />;
+export default async function EntityDetailPage({ params }: EntityDetailPageProps) {
+  const { entityId } = await params;
+
+  return <EntityDetailView entityId={entityId} />;
 }

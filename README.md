@@ -4,6 +4,24 @@ This repository is used to create a visualization of all the terms and entities 
 
 Search behavior and result-contract notes live in [docs/search.md](./docs/search.md).
 
+## Prerequisites
+
+Use Node.js `v26.3.1` for the frontend work in this repository.
+
+Recommended setup with `nvm`:
+
+```bash
+nvm install
+nvm use
+```
+
+Verify your versions:
+
+```bash
+node --version
+npm --version
+```
+
 ## Development
 
 ### Install pre-commit hooks
@@ -43,7 +61,7 @@ pre-commit run --all-files
 Run the API server:
 
 ```bash
-uvicorn api.main:app --reload
+python -m uvicorn api.main:app --reload
 ```
 
 Read an entity by ID or slug:
