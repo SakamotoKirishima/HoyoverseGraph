@@ -79,19 +79,67 @@ npm test
 - API tests should stay focused on status codes, response shape, validation behavior, and conflict handling.
 - Helper tests should stay focused on pure validation and normalization logic.
 
-## Branch Management
+## Branching Standards
 
-- Work should happen on feature branches, not directly on `main`.
-- Preferred branch naming:
+### Branch naming
+
+- Work should happen on a branch, not directly on `main`.
+- Use one of these branch prefixes:
   - `feature/<short-description>`
   - `fix/<short-description>`
-  - `docs/<short-description>`
   - `chore/<short-description>`
-- Keep each branch scoped to one task.
-- Open a pull request into `main` for review and CI.
-- Do not merge if `ruff check .` or `pytest` checks fail.
+  - `docs/<short-description>`
+  - `test/<short-description>`
+- Keep branches scoped to one feature, fix, chore, docs change, or test task.
+- Example branch names:
+  - `feature/search-page`
+  - `feature/graph-page`
+  - `chore/nextjs-upgrade`
+  - `fix/entity-detail-links`
+  - `test/frontend-smoke-tests`
+
+### PR workflow
+
+- Open a pull request into `main` for every change.
+- Keep each PR scoped to one feature, fix, chore, docs update, or test task.
+- Use the repository PR template.
+- Verify CI before merge.
+- Delete merged branches after merge.
 - Rebase or update from `main` when a branch becomes stale.
-- Delete merged branches after the pull request is merged.
+
+### Commit style
+
+- Use short imperative commit messages.
+- Good examples:
+  - `Add graph endpoint`
+  - `Fix source asset validation`
+  - `Document frontend commands`
+  - `Upgrade Next.js`
+- Avoid vague commits like `updates` or `fix stuff`.
+- Avoid unrelated changes in the same commit.
+
+### Required checks
+
+- Current required checks before merge:
+  - `pytest`
+  - `ruff`
+  - `frontend-build`
+  - `frontend-lint`
+- Future required check:
+  - `frontend-test`
+
+### Frontend tests
+
+- `frontend-test` runs in CI but is informational for now.
+- Promote `frontend-test` to required after 3-5 consecutive PRs pass without flaky failures.
+
+### Merge readiness
+
+- Required checks must pass.
+- PRs should have a clear description.
+- Testing steps should be documented.
+- No unrelated changes should be included.
+- Secrets and `.env` files must not be committed.
 
 ## Coding Standards
 

@@ -3,6 +3,7 @@
 This repository is used to create a visualization of all the terms and entities found in the hoyoverse honkai games.
 
 Search behavior and result-contract notes live in [docs/search.md](./docs/search.md).
+Contributor and agent workflow standards live in [AGENTS.md](./AGENTS.md).
 
 ## Prerequisites
 
