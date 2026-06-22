@@ -117,8 +117,22 @@ Frontend smoke tests will use:
 - jsdom
 
 These tests are planned as lightweight coverage for core pages such as search,
-graph, and entity detail. They are initially informational and should not block
-merges until the test foundation is stable.
+graph, and entity detail. They currently run in CI but are not required for
+merge. Promote `frontend-test` to a required check after 3-5 consecutive PRs
+pass without flaky failures.
+
+### Current Merge Checks
+
+Required checks today:
+
+- `pytest`
+- `ruff`
+- `frontend-build`
+- `frontend-lint`
+
+Future required check:
+
+- `frontend-test`
 
 ### Run all pre-commit checks
 
