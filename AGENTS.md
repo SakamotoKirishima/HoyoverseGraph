@@ -37,12 +37,24 @@ pre-commit run --all-files
 ```bash
 npm run build
 npm run lint
+npm test
 ```
 
 - Build failures must be fixed before merge.
 - Frontend CI checks:
   - `frontend-build`
   - `frontend-lint`
+
+## Frontend Testing
+
+- Frontend smoke tests will use `Vitest`, `React Testing Library`, and `jsdom`.
+- These tests will cover lightweight page and component behavior for the Next.js frontend.
+- Frontend tests are initially informational and should not block merges until the test setup is stable.
+- Standard frontend test command:
+
+```bash
+npm test
+```
 
 ## Testing Standards
 

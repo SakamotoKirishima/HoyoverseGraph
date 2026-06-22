@@ -102,6 +102,24 @@ Run lint:
 npm run lint
 ```
 
+Run tests:
+
+```bash
+npm test
+```
+
+### Frontend Testing Direction
+
+Frontend smoke tests will use:
+
+- Vitest
+- React Testing Library
+- jsdom
+
+These tests are planned as lightweight coverage for core pages such as search,
+graph, and entity detail. They are initially informational and should not block
+merges until the test foundation is stable.
+
 ### Run all pre-commit checks
 
 ```bash
