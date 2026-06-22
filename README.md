@@ -4,6 +4,13 @@ This repository is used to create a visualization of all the terms and entities 
 
 Search behavior and result-contract notes live in [docs/search.md](./docs/search.md).
 
+## API Documentation
+
+- [API docs index](./docs/api/README.md)
+- [Search API](./docs/api/search.md)
+- [Graph API](./docs/api/graph.md)
+- [Entity Detail API](./docs/api/entity-detail.md)
+
 ## Prerequisites
 
 Use Node.js `v26.3.1` for the frontend work in this repository.
