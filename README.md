@@ -3,7 +3,15 @@
 This repository is used to create a visualization of all the terms and entities found in the hoyoverse honkai games.
 
 Search behavior and result-contract notes live in [docs/search.md](./docs/search.md).
-Deployment planning notes live in [docs/deployment.md](./docs/deployment.md).
+Contributor and agent workflow standards live in [AGENTS.md](./AGENTS.md).
+
+## API Documentation
+
+- [API docs index](./docs/api/README.md)
+- [Search API](./docs/api/search.md)
+- [Graph API](./docs/api/graph.md)
+- [Entity Detail API](./docs/api/entity-detail.md)
+- [Depoloyment docs] (./docs/deployment.md)
 
 ## Prerequisites
 
@@ -102,6 +110,38 @@ Run lint:
 ```bash
 npm run lint
 ```
+
+Run tests:
+
+```bash
+npm test
+```
+
+### Frontend Testing Direction
+
+Frontend smoke tests will use:
+
+- Vitest
+- React Testing Library
+- jsdom
+
+These tests are planned as lightweight coverage for core pages such as search,
+graph, and entity detail. They currently run in CI but are not required for
+merge. Promote `frontend-test` to a required check after 3-5 consecutive PRs
+pass without flaky failures.
+
+### Current Merge Checks
+
+Required checks today:
+
+- `pytest`
+- `ruff`
+- `frontend-build`
+- `frontend-lint`
+
+Future required check:
+
+- `frontend-test`
 
 ### Run all pre-commit checks
 
