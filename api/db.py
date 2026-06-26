@@ -1,6 +1,9 @@
 """Database helpers for API endpoints.
 
-This module provides a request-scoped psycopg connection dependency for FastAPI.
+This module provides:
+- a request-scoped psycopg connection dependency for FastAPI
+- lightweight connectivity helpers used by deployment health checks
+
 It reads ``DATABASE_URL`` from environment variables.
 """
 
@@ -39,3 +42,15 @@ def get_db_connection() -> Generator[Connection[Any], None, None]:
         yield conn
     finally:
         conn.close()
+
+
+def ping_database() -> bool:
+    """Return True when the configured database responds to a lightweight query."""
+    try:
+        with connect(get_database_url(), row_factory=dict_row) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1;")
+                cur.fetchone()
+        return True
+    except Exception:
+        return False
