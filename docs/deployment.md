@@ -59,16 +59,21 @@ Required by the current backend code:
 
 - `DATABASE_URL`
   - Full Postgres connection string used by `api/db.py`
+- `ALLOWED_ORIGINS`
+  - Comma-separated list of frontend origins allowed to call the API
 
 Recommended example:
 
 ```bash
 DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
 ```
 
 Notes:
 
 - The backend currently reads `DATABASE_URL` directly.
+- `ALLOWED_ORIGINS` should be set explicitly in hosted environments rather than
+  relying on local defaults.
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, and
   `POSTGRES_PORT` are useful for local setup, but the deployed app does not
   require them if `DATABASE_URL` is present.
@@ -88,22 +93,15 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-service.example.com
 
 ## Current Deployment Gaps To Address Before Go-Live
 
-These are important findings from the current codebase:
+These are important deployment expectations for the current codebase:
 
-- Backend CORS is currently hardcoded for:
+- Backend CORS is environment-aware through `ALLOWED_ORIGINS`.
+- If `ALLOWED_ORIGINS` is not set, the backend falls back to local development
+  origins only:
   - `http://localhost:3000`
   - `http://127.0.0.1:3000`
-- A deployed frontend on Vercel will not be allowed until backend CORS is made
-  environment-aware.
-- This should be treated as a deployment readiness blocker for production.
-
-Recommended future configuration change:
-
-- introduce an env var such as `ALLOWED_ORIGINS`
-- configure it separately for staging and production
-
-This document does not implement that change; it only records the required
-follow-up.
+- Production and staging environments should set explicit origin lists and
+  should not rely on those local defaults.
 
 ## Staging vs Production Plan
 
@@ -122,6 +120,7 @@ Staging goals:
 - verify environment variables
 - test migrations and data loading strategy
 - smoke test search, graph, and entity detail pages against hosted services
+- verify staging `ALLOWED_ORIGINS` only includes staging or preview frontend URLs
 
 ### Production
 
@@ -138,12 +137,14 @@ Production goals:
 - stable public API base URL
 - protected production database credentials
 - explicit rollback path for frontend and backend independently
+- production `ALLOWED_ORIGINS` restricted to approved production frontend URLs
 
 ### Recommended separation
 
 - Do not share the same database between staging and production.
 - Do not point Vercel preview deployments at production data by default.
 - Keep staging and production secrets separate across all platforms.
+- Keep staging and production `ALLOWED_ORIGINS` values separate.
 
 ## Deployment Readiness Checklist
 
@@ -167,6 +168,9 @@ Production goals:
 ### Operational readiness
 
 - [ ] Health check endpoint verified: `/health`
+- [ ] Database health check endpoint verified: `/health/db`
+- [ ] `/health/db` returns `200` when the deployed database is reachable
+- [ ] `/health/db` returns `503` when the database is unavailable or misconfigured
 - [ ] Smoke test key frontend flows after deploy:
   - search
   - graph
@@ -183,7 +187,7 @@ Production goals:
 ## Recommended First Rollout Order
 
 1. Provision Neon staging and production databases.
-2. Deploy backend staging service and verify `/health`.
+2. Deploy backend staging service and verify `/health` and `/health/db`.
 3. Configure Vercel staging or preview frontend against staging backend.
 4. Validate end-to-end flows in staging.
 5. Add production-ready CORS configuration in code.
