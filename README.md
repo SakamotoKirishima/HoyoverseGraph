@@ -11,6 +11,7 @@ Contributor and agent workflow standards live in [AGENTS.md](./AGENTS.md).
 - [Search API](./docs/api/search.md)
 - [Graph API](./docs/api/graph.md)
 - [Entity Detail API](./docs/api/entity-detail.md)
+- [Depoloyment docs] (./docs/deployment.md)
 
 ## Prerequisites
 
