@@ -146,6 +146,8 @@ Do not commit real `.env`, `.env.production`, or `.env.staging` files.
 
 - Neon
   - source of truth for the backend `DATABASE_URL`
+  - optional source of truth for `DATABASE_URL_DIRECT` when you want a separate
+    direct/admin connection for schema bootstrap or other manual operations
 - Render or Railway
   - backend runtime configuration:
     - `DATABASE_URL`
@@ -166,11 +168,100 @@ Example production values:
 ```bash
 # Backend
 DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+DATABASE_URL_DIRECT=postgresql://<user>:<password>@<host>/<database>?sslmode=require
 ALLOWED_ORIGINS=https://<production-frontend-domain>
 PORT=8000
 
 # Frontend
 NEXT_PUBLIC_API_BASE_URL=https://<production-backend-domain>
+```
+
+## Database Deployment (Neon Postgres)
+
+The application already connects through a standard `DATABASE_URL` using
+`psycopg.connect(...)`, so it is compatible with Neon-style PostgreSQL URLs.
+Local Docker Postgres continues to work with the current non-SSL local URL, and
+Neon production or staging URLs should keep `sslmode=require`.
+
+### Pooled vs direct connection strings
+
+- `DATABASE_URL`
+  - Use the Neon pooled connection string for normal backend runtime traffic
+  - Configure this in Render or Railway
+- `DATABASE_URL_DIRECT`
+  - Optional
+  - Keep this for manual schema bootstrap, one-off admin work, or other tasks
+    where you explicitly want a direct connection
+  - This is documented as a separate env var, but it is not used by runtime
+    application code today
+
+### Staging and production separation
+
+- Create a production Neon database or production branch
+- Create a separate staging Neon database or staging branch
+- Store separate `DATABASE_URL` values for staging and production
+- Store separate `DATABASE_URL_DIRECT` values for staging and production if you
+  choose to keep direct/admin URLs
+- Never reuse production database credentials in staging
+
+### Schema bootstrap for Neon
+
+Local Docker Postgres applies [db/schema.sql](../db/schema.sql) automatically
+through `docker-entrypoint-initdb.d`, but Neon will not do that for you.
+
+Current status:
+
+- `db/schema.sql` appears safe to rerun because it uses `CREATE TABLE IF NOT
+  EXISTS`, `CREATE INDEX IF NOT EXISTS`, and guarded `DO $$ ... $$` blocks for
+  foreign-key additions.
+- No migration framework is currently in place.
+
+Manual bootstrap command for an empty Neon database:
+
+```bash
+psql "$DATABASE_URL_DIRECT" -f db/schema.sql
+```
+
+If you do not keep a separate direct URL, you can use:
+
+```bash
+psql "$DATABASE_URL" -f db/schema.sql
+```
+
+### Manual ingestion against Neon
+
+Do not seed staging or production automatically during application startup.
+Run ingestion manually with the appropriate environment variables for the target
+environment.
+
+Example sequence:
+
+```bash
+export DATABASE_URL="<staging-or-production-neon-url>"
+python -m ingestion.ingest_entities --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_sources --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_claims --workbook docs/hoyoverse_ontology_v1.xlsm
+```
+
+Use the staging `DATABASE_URL` for staging ingestion and the production
+`DATABASE_URL` for production ingestion. Never point staging ingestion at the
+production database.
+
+### Neon setup checklist
+
+1. In the Neon dashboard, create or identify the production project/database.
+2. Create a separate staging database or branch.
+3. Copy the pooled connection string for each environment into:
+   - Render or Railway `DATABASE_URL`
+4. Optionally copy the direct connection string for each environment into:
+   - local secure admin shell as `DATABASE_URL_DIRECT`
+   - or hosted secret storage if your team needs it there
+5. Apply the schema manually with `psql`.
+6. Run ingestion manually for the target environment.
+7. Verify the backend database check:
+
+```bash
+curl http://127.0.0.1:8000/health/db
 ```
 
 ## Current Deployment Gaps To Address Before Go-Live
@@ -272,7 +363,7 @@ Production goals:
 2. Deploy backend staging service and verify `/health` and `/health/db`.
 3. Configure Vercel staging or preview frontend against staging backend.
 4. Validate end-to-end flows in staging.
-5. Add production-ready CORS configuration in code.
+5. Configure production `ALLOWED_ORIGINS` for the deployed frontend domain.
 6. Deploy backend production service.
 7. Deploy frontend production project with production API base URL.
 
