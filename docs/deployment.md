@@ -44,6 +44,8 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT
 
 - Keep the backend separate from the frontend so each service can scale,
   restart, and roll back independently.
+- The initial GitHub Actions deployment workflow is wired for Render deploy
+  hooks to keep the first rollout simple and explicit.
 
 ### Database on Neon
 
@@ -356,6 +358,125 @@ Production goals:
 - [ ] Staging deploy process documented and tested
 - [ ] Production deploy process documented before first release
 - [ ] Rollback owner and rollback steps agreed on
+
+## GitHub Actions Deployment Workflow
+
+The repository includes a manual deployment workflow:
+
+- workflow: `.github/workflows/deploy.yml`
+- trigger: `workflow_dispatch`
+- environments:
+  - `staging`
+  - `production`
+
+This first version is intentionally staging-first and conservative:
+
+- it does not auto-deploy production on push
+- it does not apply schema changes automatically
+- it does not run ingestion automatically
+- it validates backend and frontend checks before any deploy step runs
+- it keeps frontend deployment Git-managed in Vercel for now
+- it triggers backend deployment through a Render deploy hook
+
+### What the workflow does
+
+1. Runs backend validation:
+   - `ruff check .`
+   - `pytest`
+2. Runs frontend validation:
+   - `npm run lint`
+   - `npm run build`
+   - `npm test -- --run`
+3. Triggers the backend deployment using the environment-specific Render deploy
+   hook.
+4. Performs smoke checks against:
+   - `GET <BACKEND_URL>/health`
+   - `GET <BACKEND_URL>/health/db`
+   - `GET <FRONTEND_URL>`
+
+The smoke checks use a short retry loop so the workflow can wait for the hosted
+services to become healthy after a deployment trigger.
+
+### Manual trigger steps
+
+1. Open the GitHub repository.
+2. Go to **Actions**.
+3. Open the **Deploy** workflow.
+4. Click **Run workflow**.
+5. Choose `staging` or `production`.
+6. Start the workflow.
+
+Recommended order:
+
+1. Deploy `staging`
+2. Verify staging behavior
+3. Deploy `production`
+
+### Required GitHub Environments
+
+Create these GitHub Environments:
+
+- `staging`
+- `production`
+
+The deploy job uses:
+
+```yaml
+environment: ${{ inputs.environment }}
+```
+
+That allows environment-specific secrets, variables, reviewers, and protection
+rules to be added later without rewriting the workflow.
+
+### Required GitHub Environment configuration
+
+For each GitHub Environment, configure:
+
+Environment variables:
+
+- `BACKEND_URL`
+  - example staging value: `https://staging-api.example.com`
+  - example production value: `https://api.example.com`
+- `FRONTEND_URL`
+  - example staging value: `https://staging-frontend.example.com`
+  - example production value: `https://your-vercel-app.vercel.app`
+
+Environment secrets:
+
+- `RENDER_DEPLOY_HOOK`
+  - Render deploy hook URL for that environment's backend service
+
+Optional Vercel secrets are not required for the current workflow because the
+frontend remains Git-managed by Vercel:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+If the team later decides to deploy Vercel explicitly from GitHub Actions,
+those values can be added then.
+
+### Deployment order
+
+1. Ensure required checks are green on the branch you intend to deploy.
+2. Ensure environment-specific secrets and variables are configured.
+3. Trigger the workflow for `staging`.
+4. Wait for smoke checks to pass.
+5. Verify key user flows in staging.
+6. Trigger the workflow for `production`.
+7. Verify smoke checks and hosted application behavior.
+
+### Rollback
+
+Rollback is initially handled through provider deployment history rather than
+through automated GitHub Actions rollback steps.
+
+- Vercel rollback: use Vercel deployment history
+- Render rollback: use Render deployment history or redeploy a known-good
+  version
+
+This keeps the first deployment workflow simple while still giving operators a
+clear recovery path.
 
 ## Recommended First Rollout Order
 
