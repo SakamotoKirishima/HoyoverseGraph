@@ -61,12 +61,16 @@ Required by the current backend code:
   - Full Postgres connection string used by `api/db.py`
 - `ALLOWED_ORIGINS`
   - Comma-separated list of frontend origins allowed to call the API
+- `PORT`
+  - Optional runtime port used by container platforms; defaults to `8000`
+    when not provided
 
 Recommended example:
 
 ```bash
 DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
 ALLOWED_ORIGINS=https://your-vercel-app.vercel.app
+PORT=8000
 ```
 
 Notes:
@@ -74,6 +78,8 @@ Notes:
 - The backend currently reads `DATABASE_URL` directly.
 - `ALLOWED_ORIGINS` should be set explicitly in hosted environments rather than
   relying on local defaults.
+- The backend container startup command reads `PORT` at runtime and falls back
+  to `8000` when the hosting platform does not inject it.
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, and
   `POSTGRES_PORT` are useful for local setup, but the deployed app does not
   require them if `DATABASE_URL` is present.
@@ -193,6 +199,52 @@ Production goals:
 5. Add production-ready CORS configuration in code.
 6. Deploy backend production service.
 7. Deploy frontend production project with production API base URL.
+
+## Backend Container Build And Run
+
+The backend can be packaged as a standalone Docker image without bundling
+Postgres. Production Postgres remains an external managed service.
+
+### Build the image
+
+From the repository root:
+
+```bash
+docker build -t hoyoverse-graph-api .
+```
+
+### Required runtime environment variables
+
+- `DATABASE_URL`
+- `ALLOWED_ORIGINS`
+- `PORT` when provided by the hosting platform
+
+### Run locally against the existing Docker Compose Postgres
+
+Because the local Postgres container publishes port `5432` on the host, the
+backend container should connect to the host machine, not to `localhost`
+inside the container.
+
+On macOS and Docker Desktop, use `host.docker.internal`:
+
+```bash
+docker run --rm \
+  -p 8000:8000 \
+  -e DATABASE_URL="postgresql://hoyo:hoyo_dev_password@host.docker.internal:5432/hoyoverse_graph" \
+  -e ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000" \
+  hoyoverse-graph-api
+```
+
+Then verify:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/health/db
+```
+
+If you later run this on Linux, you may need to provide an explicit host-gateway
+mapping or use a Docker network-aware Postgres hostname instead of
+`host.docker.internal`.
 
 ## Future Improvements
 
