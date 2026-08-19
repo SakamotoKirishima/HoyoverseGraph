@@ -105,6 +105,74 @@ Important note:
 - Changing only the container runtime environment will not rebuild already
   bundled client-side API URLs.
 
+## Environment Configuration
+
+Use the checked-in example files as templates only:
+
+- backend local development: `.env.example`
+- backend staging: `.env.staging.example`
+- backend production: `.env.production.example`
+- frontend local development: `frontend/.env.example`
+- frontend staging: `frontend/.env.staging.example`
+- frontend production: `frontend/.env.production.example`
+
+Do not commit real `.env`, `.env.production`, or `.env.staging` files.
+
+### Backend variables
+
+- `DATABASE_URL`
+  - Secret
+  - Used by the FastAPI backend to connect to Postgres
+  - Configure this in Neon and then copy the value into Render or Railway
+    secret/environment settings
+- `ALLOWED_ORIGINS`
+  - Not secret
+  - Comma-separated frontend origin list used for CORS
+  - Configure separately in Render or Railway for staging and production
+- `PORT`
+  - Not secret
+  - Usually provided automatically by Render or Railway
+  - Keep `PORT=8000` only as a template/default example
+
+### Frontend variables
+
+- `NEXT_PUBLIC_API_BASE_URL`
+  - Public
+  - Embedded into the Next.js bundle at build time
+  - Configure this in Vercel project settings or supply it as a Docker build arg
+  - `NEXT_PUBLIC_*` values must never contain secrets
+
+### Platform ownership
+
+- Neon
+  - source of truth for the backend `DATABASE_URL`
+- Render or Railway
+  - backend runtime configuration:
+    - `DATABASE_URL`
+    - `ALLOWED_ORIGINS`
+    - platform-managed `PORT`
+- Vercel
+  - frontend build/runtime configuration:
+    - `NEXT_PUBLIC_API_BASE_URL`
+
+### Staging vs production
+
+- Use separate `DATABASE_URL` values for staging and production
+- Use separate `ALLOWED_ORIGINS` values for staging and production
+- Use separate `NEXT_PUBLIC_API_BASE_URL` values for staging and production
+
+Example production values:
+
+```bash
+# Backend
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+ALLOWED_ORIGINS=https://<production-frontend-domain>
+PORT=8000
+
+# Frontend
+NEXT_PUBLIC_API_BASE_URL=https://<production-backend-domain>
+```
+
 ## Current Deployment Gaps To Address Before Go-Live
 
 These are important deployment expectations for the current codebase:
