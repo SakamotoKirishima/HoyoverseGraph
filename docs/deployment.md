@@ -478,6 +478,193 @@ through automated GitHub Actions rollback steps.
 This keeps the first deployment workflow simple while still giving operators a
 clear recovery path.
 
+## Staging Environment Setup
+
+This section is the recommended first hosted environment to create. Set up
+staging fully before touching production resources.
+
+### 1. Create the GitHub Environment
+
+Create a GitHub Environment named:
+
+- `staging`
+
+Configure the following values for that environment.
+
+Environment variables:
+
+- `BACKEND_URL`
+  - example: `https://staging-api.example.com`
+- `FRONTEND_URL`
+  - example: `https://staging-hoyoverse-graph.vercel.app`
+
+Environment secrets:
+
+- `RENDER_DEPLOY_HOOK`
+  - Render deploy hook URL for the staging backend service
+
+Notes:
+
+- `DATABASE_URL` does not need to live in the GitHub Environment for the
+  current workflow because the workflow does not run migrations or seed data.
+- `DATABASE_URL` must still be configured in the staging backend host itself.
+- Vercel CLI credentials are not required for the current workflow because the
+  frontend remains Git-managed by Vercel.
+
+### 2. Create the Neon staging database
+
+In Neon:
+
+1. Open the Neon dashboard.
+2. Create a dedicated staging database or staging branch.
+3. Copy the pooled connection string for application traffic.
+4. Optionally copy the direct connection string for manual admin work.
+
+Recommended variable mapping:
+
+- staging backend host `DATABASE_URL`
+  - Neon pooled connection string
+- local secure shell `DATABASE_URL_DIRECT`
+  - Neon direct connection string for manual schema/bootstrap work
+
+Do not reuse production credentials or connect staging services to the
+production database.
+
+### 3. Apply schema to staging
+
+Bootstrap the staging schema manually:
+
+```bash
+export DATABASE_URL_DIRECT="<staging-neon-direct-url>"
+psql "$DATABASE_URL_DIRECT" -f db/schema.sql
+```
+
+If you are not using a separate direct connection string:
+
+```bash
+export DATABASE_URL="<staging-neon-pooled-url>"
+psql "$DATABASE_URL" -f db/schema.sql
+```
+
+### 4. Load seed data into staging
+
+Run ingestion manually against staging after the schema is in place:
+
+```bash
+export DATABASE_URL="<staging-neon-pooled-url>"
+python -m ingestion.ingest_entities --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_sources --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_claims --workbook docs/hoyoverse_ontology_v1.xlsm
+```
+
+Do not run ingestion automatically on every deploy.
+
+### 5. Create the staging backend service
+
+Create a separate staging backend service in Render.
+
+Use the production startup command:
+
+```bash
+python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT
+```
+
+Configure these runtime environment variables in the staging backend host:
+
+- `DATABASE_URL=<staging Neon pooled URL>`
+- `ALLOWED_ORIGINS=<staging frontend URL>`
+
+Important:
+
+- `ALLOWED_ORIGINS` should contain only staging or preview frontend URLs.
+- Do not include the production frontend origin unless there is a deliberate
+  reason to do so.
+
+Health check path:
+
+- `/health`
+
+Validate after deployment:
+
+```bash
+curl https://<staging-backend-domain>/health
+curl https://<staging-backend-domain>/health/db
+```
+
+### 6. Create the staging frontend deployment
+
+Create a Vercel staging or preview deployment for the frontend.
+
+Configure:
+
+- `NEXT_PUBLIC_API_BASE_URL=<staging backend URL>`
+
+Because `NEXT_PUBLIC_API_BASE_URL` is a build-time public value, staging builds
+must use the staging backend URL. Do not point staging frontend builds at the
+production backend.
+
+### 7. Manually run the staging deployment workflow
+
+After staging backend/frontend resources and GitHub Environment values are in
+place:
+
+1. Open **Actions** in GitHub.
+2. Open the **Deploy** workflow.
+3. Click **Run workflow**.
+4. Select `staging`.
+5. Start the workflow.
+
+The workflow will:
+
+1. run backend and frontend validation
+2. trigger the staging backend deploy through Render
+3. check:
+   - `GET <BACKEND_URL>/health`
+   - `GET <BACKEND_URL>/health/db`
+   - `GET <FRONTEND_URL>`
+
+### 8. Staging smoke validation
+
+After the workflow succeeds, verify:
+
+- Search page loads and returns results
+- Graph page loads
+- Entity detail page loads
+- Backend `/health` passes
+- Backend `/health/db` passes
+
+Suggested manual checks:
+
+```bash
+curl https://<staging-backend-domain>/health
+curl https://<staging-backend-domain>/health/db
+```
+
+Then open the staging frontend and test:
+
+- `/search?q=kaslana`
+- `/graph?seed_entity_id=ENT-0804&depth=1`
+- `/entities/ENT-0804`
+
+### Staging checklist
+
+- [ ] staging GitHub Environment created
+- [ ] staging `BACKEND_URL` configured
+- [ ] staging `FRONTEND_URL` configured
+- [ ] staging `RENDER_DEPLOY_HOOK` configured
+- [ ] staging Neon DB created
+- [ ] schema applied
+- [ ] seed data loaded
+- [ ] staging backend created
+- [ ] staging frontend created
+- [ ] staging env vars configured
+- [ ] staging CORS configured
+- [ ] `/health` passes
+- [ ] `/health/db` passes
+- [ ] Search smoke test passes
+- [ ] Graph smoke test passes
+- [ ] Entity detail smoke test passes
+
 ## Recommended First Rollout Order
 
 1. Provision Neon staging and production databases.
