@@ -97,6 +97,14 @@ Example:
 NEXT_PUBLIC_API_BASE_URL=https://your-backend-service.example.com
 ```
 
+Important note:
+
+- `NEXT_PUBLIC_API_BASE_URL` is a build-time value for the current Next.js
+  frontend because `NEXT_PUBLIC_*` variables are embedded into the client bundle.
+- For Docker-based frontend builds, provide this value during `docker build`.
+- Changing only the container runtime environment will not rebuild already
+  bundled client-side API URLs.
+
 ## Current Deployment Gaps To Address Before Go-Live
 
 These are important deployment expectations for the current codebase:
@@ -245,6 +253,44 @@ curl http://127.0.0.1:8000/health/db
 If you later run this on Linux, you may need to provide an explicit host-gateway
 mapping or use a Docker network-aware Postgres hostname instead of
 `host.docker.internal`.
+
+## Frontend Container Build And Run
+
+The frontend can also be packaged as a standalone Docker image for portability
+and production-like local testing. The planned production deployment target
+remains Vercel, so this Dockerfile is optional for the hosted deployment path.
+
+### Build the image
+
+From the repository root:
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 \
+  -t hoyoverse-graph-frontend \
+  ./frontend
+```
+
+### Run the image locally
+
+```bash
+docker run --rm -p 3000:3000 hoyoverse-graph-frontend
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+### Runtime notes
+
+- The container listens on `0.0.0.0`.
+- `PORT` defaults to `3000` when not supplied.
+- For local frontend-to-backend communication in the browser, build the image
+  with a browser-accessible API URL such as `http://localhost:8000` or
+  `http://127.0.0.1:8000`.
+- Vercel does not require this Dockerfile for the planned production deployment.
 
 ## Future Improvements
 
