@@ -665,6 +665,282 @@ Then open the staging frontend and test:
 - [ ] Graph smoke test passes
 - [ ] Entity detail smoke test passes
 
+## Production Environment Setup
+
+Production should stay fully isolated from staging. Do not reuse staging
+database URLs, deploy hooks, frontend URLs, or secrets in the production
+environment.
+
+### 1. Create the GitHub Environment
+
+Create a GitHub Environment named:
+
+- `production`
+
+Configure the following values for that environment.
+
+Environment variables:
+
+- `BACKEND_URL`
+  - example: `https://api.example.com`
+- `FRONTEND_URL`
+  - example: `https://your-vercel-app.vercel.app`
+
+Environment secrets:
+
+- `RENDER_DEPLOY_HOOK`
+  - Render deploy hook URL for the production backend service
+
+Optional Vercel secrets if the team later decides to deploy Vercel directly
+from GitHub Actions:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+If GitHub Environment protection rules are available for this repository,
+enable manual approval for the `production` environment before deploy jobs can
+run.
+
+Notes:
+
+- `DATABASE_URL` does not need to live in the GitHub Environment for the
+  current workflow because the workflow does not run schema bootstrap or data
+  ingestion.
+- `DATABASE_URL` must still be configured in the production backend host.
+- Never commit or echo production secrets.
+
+### 2. Create the Neon production database
+
+In Neon:
+
+1. Open the Neon dashboard.
+2. Create or identify a dedicated production database or production branch.
+3. Confirm that production remains separate from staging.
+4. Copy the pooled connection string for application traffic.
+5. Optionally copy the direct connection string for manual schema/bootstrap
+   operations.
+
+Recommended variable mapping:
+
+- production backend host `DATABASE_URL`
+  - Neon pooled connection string
+- local secure shell `DATABASE_URL_DIRECT`
+  - Neon direct connection string for manual schema/bootstrap work
+
+Production must never reuse the staging `DATABASE_URL`.
+
+### 3. Bootstrap the production schema intentionally
+
+Do not apply schema automatically at app startup. Bootstrap production
+intentionally and only after confirming the target database is correct.
+
+Preferred command:
+
+```bash
+export DATABASE_URL_DIRECT="<production-neon-direct-url>"
+psql "$DATABASE_URL_DIRECT" -f db/schema.sql
+```
+
+Fallback if you do not keep a separate direct connection string:
+
+```bash
+export DATABASE_URL="<production-neon-pooled-url>"
+psql "$DATABASE_URL" -f db/schema.sql
+```
+
+Current status:
+
+- `db/schema.sql` appears safely rerunnable because it uses `CREATE TABLE IF NOT
+  EXISTS`, `CREATE INDEX IF NOT EXISTS`, and guarded constraint creation blocks.
+- Even so, schema bootstrap should remain a deliberate operator action in
+  production.
+
+### 4. Load production seed data intentionally
+
+Run production ingestion manually only after:
+
+1. the same release has passed staging smoke validation
+2. the target production database has been verified
+3. the input workbook/data has been reviewed
+
+Example command sequence:
+
+```bash
+export DATABASE_URL="<production-neon-pooled-url>"
+python -m ingestion.ingest_entities --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_sources --workbook docs/hoyoverse_ontology_v1.xlsm
+python -m ingestion.ingest_claims --workbook docs/hoyoverse_ontology_v1.xlsm
+```
+
+Warnings:
+
+- Do not run ingestion automatically during deployment.
+- Verify the same workbook and ingestion flow against staging first.
+- Do not point staging ingestion at production, or production ingestion at
+  staging, by mistake.
+
+### 5. Create the production backend service
+
+Create a separate production backend service in Render.
+
+Use the production startup command:
+
+```bash
+python -m uvicorn api.main:app --host 0.0.0.0 --port $PORT
+```
+
+Configure these runtime environment variables in the production backend host:
+
+- `DATABASE_URL=<production Neon pooled connection string>`
+- `ALLOWED_ORIGINS=<production frontend origin>`
+
+Health check path:
+
+- `/health`
+
+Validate after deployment:
+
+```bash
+curl https://<production-backend-domain>/health
+curl https://<production-backend-domain>/health/db
+```
+
+Production backend must not use staging DB credentials.
+
+### 6. Create the production frontend deployment
+
+Use the production Vercel project or production deployment target for the
+frontend.
+
+Configure:
+
+- `NEXT_PUBLIC_API_BASE_URL=<production backend URL>`
+
+Important:
+
+- `NEXT_PUBLIC_API_BASE_URL` is a public build-time value.
+- The production frontend must use the production backend URL.
+- Do not point the production frontend at the staging backend.
+
+### 7. Configure production CORS
+
+Production `ALLOWED_ORIGINS` should contain only approved production frontend
+origins.
+
+Example:
+
+```bash
+ALLOWED_ORIGINS=https://<production-domain>
+```
+
+Do not use `*`, and do not include staging URLs unless there is an explicit and
+reviewed need.
+
+### 8. Run the production deployment workflow manually
+
+Production deployment remains manual for now.
+
+To run it:
+
+1. Open **Actions** in GitHub.
+2. Open the **Deploy** workflow.
+3. Click **Run workflow**.
+4. Select `production`.
+5. Start the workflow.
+
+Recommended preconditions:
+
+- required CI checks are green
+- staging smoke tests passed for the same release
+- production environment secrets and variables are already configured
+- reviewers or approvers have signed off if environment protection is enabled
+
+### 9. Pre-deployment checks
+
+Before production deployment, verify:
+
+Backend:
+
+- `pytest`
+- `ruff check .`
+
+Frontend:
+
+- `npm run build`
+- `npm run lint`
+- `npm test` if frontend tests have become stable/required for your release
+  process
+
+Also confirm the corresponding staging deployment has already passed smoke
+validation for the same release candidate.
+
+### 10. Post-deployment validation
+
+After the production deployment completes, verify:
+
+Backend:
+
+- `GET /health`
+- `GET /health/db`
+
+Frontend:
+
+- homepage loads
+- Search page works
+- Graph page works
+- Entity Detail page works
+
+Suggested manual checks:
+
+```bash
+curl https://<production-backend-domain>/health
+curl https://<production-backend-domain>/health/db
+```
+
+Then open the production frontend and test:
+
+- `/`
+- `/search?q=kaslana`
+- `/graph?seed_entity_id=ENT-0804&depth=1`
+- `/entities/ENT-0804`
+
+Verify that frontend requests are reaching the production backend successfully.
+
+### 11. Rollback
+
+Initial rollback strategy:
+
+- frontend: redeploy the previous known-good Vercel deployment
+- backend: redeploy the previous known-good Render deployment
+- database changes are not automatically rolled back
+
+Important:
+
+- destructive or data-changing DB operations require a separate migration,
+  backup, and recovery strategy
+- this workflow does not attempt DB rollback
+
+### Production readiness checklist
+
+- [ ] production Neon DB created
+- [ ] production DB credentials stored securely
+- [ ] schema applied
+- [ ] seed data validated and loaded
+- [ ] production backend service created
+- [ ] production frontend project created
+- [ ] production environment variables configured
+- [ ] production CORS restricted correctly
+- [ ] GitHub production environment configured
+- [ ] required CI checks pass
+- [ ] staging smoke tests pass
+- [ ] `/health` passes
+- [ ] `/health/db` passes
+- [ ] Search smoke test passes
+- [ ] Graph smoke test passes
+- [ ] Entity Detail smoke test passes
+- [ ] rollback procedure documented
+
 ## Recommended First Rollout Order
 
 1. Provision Neon staging and production databases.
