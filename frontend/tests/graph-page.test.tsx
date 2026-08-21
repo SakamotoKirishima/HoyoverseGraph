@@ -135,7 +135,9 @@ describe("GraphPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Seed: ENT-0804")).toBeInTheDocument();
     expect(screen.getByText("Depth: 1")).toBeInTheDocument();
-    expect(cytoscapeFactory).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(cytoscapeFactory).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("shows the no-edges state when only the seed node is returned", async () => {

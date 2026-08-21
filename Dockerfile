@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY api ./api
+COPY ingestion ./ingestion
+COPY docs/hoyoverse_ontology_v1.xlsm ./docs/hoyoverse_ontology_v1.xlsm
 
 USER app
 
