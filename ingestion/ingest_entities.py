@@ -11,20 +11,11 @@ from typing import Any, Mapping
 
 from dotenv import load_dotenv
 
+from api.game_constants import PRIMARY_SCOPE_GAME_ALIASES
 from ingestion.db import UpsertSummary, get_connection, upsert_entities
 from ingestion.excel_reader import read_entities_workbook
 from ingestion.logging_utils import configure_logging, generate_run_id, log_kv
 from ingestion.validators import validate_entities_rows
-
-PRIMARY_SCOPE_GAME_ALIASES: dict[str, str] = {
-    "HI3": "Honkai Impact 3",
-    "Honkai Impact 3rd": "Honkai Impact 3",
-    "HSR": "Honkai: Star Rail",
-    "Genshin": "Genshin Impact",
-    "GGZ": "Gun Girls Z",
-    "Guns Girl Z": "Gun Girls Z",
-    "Cross-title": "Multi",
-}
 
 
 def parse_args() -> argparse.Namespace:

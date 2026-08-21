@@ -14,7 +14,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping
 
-from ingestion.ingest_entities import PRIMARY_SCOPE_GAME_ALIASES
+from api.game_constants import PRIMARY_SCOPE_GAME_ALIASES
 
 STARTER_STATUS_ALLOWED: set[str] = {"seed", "candidate", "backlog"}
 PRIMARY_SCOPE_ALLOWED: set[str] = {
