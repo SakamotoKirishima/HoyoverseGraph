@@ -249,14 +249,52 @@ def _build_graph_response(
     )
 
 
-@router.get("/graph", response_model=GraphResponse)
+@router.get(
+    "/graph",
+    response_model=GraphResponse,
+    summary="Retrieve a seed-centered entity graph",
+    description=(
+        "Build a graph neighborhood around one seed entity. Nodes are entities and edges are "
+        "claims, preserving subject_entity_id -> object_entity_id direction. Supports 1-hop and "
+        "2-hop expansion plus optional predicate, confidence_min, and evidence_status filters."
+    ),
+    response_description="Seed-centered graph payload containing entity nodes and directed claim edges.",
+    responses={
+        404: {"description": "Seed entity was not found."},
+        422: {"description": "Validation error for seed_entity_id, depth, predicate, or filter values."},
+        500: {"description": "Unexpected backend error or unavailable predicate catalog."},
+    },
+)
 def get_graph(
-    seed_entity_id: str = Query(..., pattern=r"^ENT-\d{4}$"),
-    depth: int = Query(default=1),
-    predicate: str | None = Query(default=None),
-    confidence_min: float | None = Query(default=None, ge=0.0, le=1.0),
-    evidence_status: str | None = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=500),
+    seed_entity_id: str = Query(
+        ...,
+        pattern=r"^ENT-\d{4}$",
+        description="Required seed entity identifier in ENT-#### format.",
+    ),
+    depth: int = Query(
+        default=1,
+        description="Graph expansion depth. Only 1-hop and 2-hop expansion are supported.",
+    ),
+    predicate: str | None = Query(
+        default=None,
+        description="Optional exact-match predicate filter applied to graph edges.",
+    ),
+    confidence_min: float | None = Query(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Optional lower bound for claim confidence. Null confidence values do not pass this filter.",
+    ),
+    evidence_status: str | None = Query(
+        default=None,
+        description="Optional exact-match evidence status filter applied to graph edges.",
+    ),
+    limit: int = Query(
+        default=100,
+        ge=1,
+        le=500,
+        description="Maximum number of edges to return. Default 100, max 500.",
+    ),
     conn: Connection[Any] = Depends(get_db_connection),
 ) -> GraphResponse:
     """Return a seed-centered graph neighborhood for one entity."""

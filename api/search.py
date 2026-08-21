@@ -28,14 +28,28 @@ router = APIRouter(tags=["search"])
 class SearchResultResponse(BaseModel):
     """Entity search result response."""
 
-    entity_id: str
-    canonical_name: str
-    display_label: str | None = None
-    entity_type: str
-    primary_scope_game: str | None = None
-    aliases: list[str] = Field(default_factory=list)
-    short_description: str | None = None
-    source_count: int
+    entity_id: str = Field(description="Entity identifier in ENT-#### format.")
+    canonical_name: str = Field(description="Canonical entity name.")
+    display_label: str | None = Field(
+        default=None,
+        description="Preferred display label when different from canonical_name.",
+    )
+    entity_type: str = Field(description="Ontology entity type code.")
+    primary_scope_game: str | None = Field(
+        default=None,
+        description="Canonical primary scope game when available.",
+    )
+    aliases: list[str] = Field(
+        default_factory=list,
+        description="Aliases returned as a list of strings. aliases_pipe_delimited is not exposed.",
+    )
+    short_description: str | None = Field(
+        default=None,
+        description="Short descriptive text used in search results when available.",
+    )
+    source_count: int = Field(
+        description="Count of distinct non-null source_id values from claims touching the entity."
+    )
 
 
 def _normalized_text(value: str | None) -> str:
@@ -295,13 +309,45 @@ def _search_entities(
     return rows if rows is not None else []
 
 
-@router.get("/search", response_model=list[SearchResultResponse])
+@router.get(
+    "/search",
+    response_model=list[SearchResultResponse],
+    summary="Search entities with alias-aware, source-aware results",
+    description=(
+        "Search entities across canonical names, display labels, aliases, short descriptions, "
+        "and notes. Results use identity-first ranking, support optional entity_type and "
+        "primary_scope_game filters, return aliases as a list, and include source_count."
+    ),
+    response_description="Ordered list of lightweight entity search results.",
+    responses={
+        422: {"description": "Validation error for blank q, invalid filters, or invalid pagination values."},
+        500: {"description": "Unexpected backend or database error."},
+    },
+)
 def search_entities(
-    q: str = Query(..., description="Search text."),
-    entity_type: str | None = Query(default=None),
-    primary_scope_game: str | None = Query(default=None),
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    q: str = Query(
+        ...,
+        description="Required search text. Trimmed before search and rejected if blank.",
+    ),
+    entity_type: str | None = Query(
+        default=None,
+        description="Optional exact-match entity type filter.",
+    ),
+    primary_scope_game: str | None = Query(
+        default=None,
+        description="Optional canonical game filter. Shared game aliases are normalized before matching.",
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum number of results to return. Default 20, max 100.",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Result offset for pagination. Default 0.",
+    ),
     conn: Connection[Any] = Depends(get_db_connection),
 ) -> list[SearchResultResponse]:
     """Search entities with identity-first ranking and optional filters."""

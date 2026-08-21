@@ -115,85 +115,155 @@ class EntityDeleteConflictResponse(BaseModel):
 class EntityDetailEntity(BaseModel):
     """Canonical entity payload for detail pages."""
 
-    entity_id: str
-    canonical_name: str
-    display_label: str | None = None
-    entity_type: str
-    primary_scope_game: str | None = None
-    aliases: list[str] = Field(default_factory=list)
-    short_description: str | None = None
-    starter_status: str | None = None
-    notes: str | None = None
+    entity_id: str = Field(description="Entity identifier in ENT-#### format.")
+    canonical_name: str = Field(description="Canonical entity name.")
+    display_label: str | None = Field(
+        default=None,
+        description="Preferred frontend label when different from canonical_name.",
+    )
+    entity_type: str = Field(description="Ontology entity type code.")
+    primary_scope_game: str | None = Field(
+        default=None,
+        description="Canonical primary scope game when available.",
+    )
+    aliases: list[str] = Field(
+        default_factory=list,
+        description="Aliases returned as a list of strings. aliases_pipe_delimited is not exposed.",
+    )
+    short_description: str | None = Field(
+        default=None,
+        description="Short descriptive text for entity summaries when available.",
+    )
+    starter_status: str | None = Field(
+        default=None,
+        description="Optional starter or curation status for the entity.",
+    )
+    notes: str | None = Field(
+        default=None,
+        description="Optional notes captured on the entity record.",
+    )
 
 
 class EntityDetailClaimSummary(BaseModel):
     """Claim summary payload for entity detail pages."""
 
-    claim_id: str
-    subject_entity_id: str
-    predicate: str
-    object_entity_id: str
-    evidence_status: str | None = None
-    confidence: float | None = None
-    source_id: str | None = None
-    asset_id: str | None = None
-    locator: str | None = None
-    note: str | None = None
-    review_status: str | None = None
-    claim_status: str | None = None
-    supersedes_claim_id: str | None = None
-    contradicts_claim_id: str | None = None
-    direction: Literal["outgoing", "incoming"]
+    claim_id: str = Field(description="Claim identifier in CLM-#### format.")
+    subject_entity_id: str = Field(description="Claim subject entity identifier.")
+    predicate: str = Field(description="Exact claim predicate code.")
+    object_entity_id: str = Field(description="Claim object entity identifier.")
+    evidence_status: str | None = Field(
+        default=None,
+        description="Optional evidence strength or provenance status for the claim.",
+    )
+    confidence: float | None = Field(
+        default=None,
+        description="Optional claim confidence between 0 and 1.",
+    )
+    source_id: str | None = Field(
+        default=None,
+        description="Optional linked source record identifier.",
+    )
+    asset_id: str | None = Field(
+        default=None,
+        description="Optional linked source asset identifier.",
+    )
+    locator: str | None = Field(
+        default=None,
+        description="Optional source or asset locator for the claim.",
+    )
+    note: str | None = Field(default=None, description="Optional claim note.")
+    review_status: str | None = Field(
+        default=None,
+        description="Optional review workflow status.",
+    )
+    claim_status: str | None = Field(
+        default=None,
+        description="Optional claim lifecycle status.",
+    )
+    supersedes_claim_id: str | None = Field(
+        default=None,
+        description="Optional claim identifier superseded by this claim.",
+    )
+    contradicts_claim_id: str | None = Field(
+        default=None,
+        description="Optional claim identifier contradicted by this claim.",
+    )
+    direction: Literal["outgoing", "incoming"] = Field(
+        description="Relationship direction relative to the requested entity."
+    )
 
 
 class EntityDetailSourceSummary(BaseModel):
     """Source summary payload for entity detail pages."""
 
-    source_id: str
-    title: str
-    url: str | None = None
-    source_type: str
-    source_format: str
-    game: str | None = None
-    scope: str | None = None
-    reliability_tier: str | None = None
-    language: str | None = None
-    publication_date: str | None = None
-    notes: str | None = None
+    source_id: str = Field(description="Source identifier in SRC-{DOMAIN}-#### format.")
+    title: str = Field(description="Source title.")
+    url: str | None = Field(
+        default=None,
+        description="Optional public URL for the source.",
+    )
+    source_type: str = Field(description="Source type classification.")
+    source_format: str = Field(description="Source format classification.")
+    game: str | None = Field(default=None, description="Canonical game association when available.")
+    scope: str | None = Field(default=None, description="Optional source scope classification.")
+    reliability_tier: str | None = Field(
+        default=None,
+        description="Optional source reliability tier.",
+    )
+    language: str | None = Field(default=None, description="Optional source language code.")
+    publication_date: str | None = Field(
+        default=None,
+        description="Optional publication date serialized as a string.",
+    )
+    notes: str | None = Field(default=None, description="Optional source notes.")
 
 
 class EntityDetailAssetSummary(BaseModel):
     """Asset summary payload for entity detail pages."""
 
-    asset_id: str
-    source_id: str
-    asset_type: str
-    file_path_or_url: str | None = None
-    locator: str | None = None
-    description: str | None = None
-    is_primary_evidence: bool | None = None
-    notes: str | None = None
+    asset_id: str = Field(description="Asset identifier in AST-{DOMAIN}-#### format.")
+    source_id: str = Field(description="Source identifier linked to this asset.")
+    asset_type: str = Field(description="Asset type classification.")
+    file_path_or_url: str | None = Field(
+        default=None,
+        description="Optional asset file path or URL.",
+    )
+    locator: str | None = Field(default=None, description="Optional asset locator or citation pointer.")
+    description: str | None = Field(default=None, description="Optional asset description.")
+    is_primary_evidence: bool | None = Field(
+        default=None,
+        description="Whether the asset is marked as primary evidence.",
+    )
+    notes: str | None = Field(default=None, description="Optional asset notes.")
 
 
 class EntityGraphContext(BaseModel):
     """Lightweight graph-link context for entity detail pages."""
 
-    seed_entity_id: str
-    graph_url: str
-    related_claim_count: int
-    related_entity_count: int
-    source_count: int
-    asset_count: int
+    seed_entity_id: str = Field(description="Entity identifier to use as the seed for /graph.")
+    graph_url: str = Field(description="Default graph URL for exploring this entity in graph view.")
+    related_claim_count: int = Field(description="Count of claims related to the entity.")
+    related_entity_count: int = Field(description="Count of distinct related entities in the detail payload.")
+    source_count: int = Field(description="Count of deduped related sources.")
+    asset_count: int = Field(description="Count of deduped related assets.")
 
 
 class EntityDetailResponse(BaseModel):
     """Consolidated entity detail response."""
 
-    entity: EntityDetailEntity
-    claims: list[EntityDetailClaimSummary]
-    sources: list[EntityDetailSourceSummary]
-    assets: list[EntityDetailAssetSummary]
-    graph_context: EntityGraphContext
+    entity: EntityDetailEntity = Field(description="Canonical entity metadata for the detail page.")
+    claims: list[EntityDetailClaimSummary] = Field(
+        description="Claims related to the entity, including incoming/outgoing direction."
+    )
+    sources: list[EntityDetailSourceSummary] = Field(
+        description="Deduped source records linked from the related claims."
+    )
+    assets: list[EntityDetailAssetSummary] = Field(
+        description="Deduped source assets linked from the related claims."
+    )
+    graph_context: EntityGraphContext = Field(
+        description="Lightweight graph-link context for opening the entity in /graph."
+    )
 
 
 def _slugify(value: str) -> str:
@@ -842,12 +912,27 @@ def lookup_entity(
         ) from exc
 
 
-@router.get("/{entity_id}/detail", response_model=EntityDetailResponse)
+@router.get(
+    "/{entity_id}/detail",
+    response_model=EntityDetailResponse,
+    summary="Retrieve consolidated entity detail data",
+    description=(
+        "Return canonical entity metadata together with related claims, deduped source records, "
+        "deduped source assets, and graph_context for linking into /graph. Related claims include "
+        "incoming or outgoing direction relative to the requested entity."
+    ),
+    response_description="Consolidated entity detail payload for detail pages.",
+    responses={
+        404: {"description": "Entity detail record was not found."},
+        422: {"description": "Validation error for malformed entity_id."},
+        500: {"description": "Unexpected backend or database error."},
+    },
+)
 def get_entity_detail(
     entity_id: str = Path(
         ...,
         pattern=r"^ENT-\d{4}$",
-        description="Entity ID in ENT-#### format.",
+        description="Required entity identifier in ENT-#### format.",
     ),
     conn: Connection[Any] = Depends(get_db_connection),
 ) -> EntityDetailResponse:
