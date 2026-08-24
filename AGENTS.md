@@ -44,14 +44,13 @@ npm test
 - Frontend CI checks:
   - `frontend-build`
   - `frontend-lint`
-  - `frontend-test` (informational for now)
+  - `frontend-test`
 
 ## Frontend Testing
 
 - Frontend smoke tests will use `Vitest`, `React Testing Library`, and `jsdom`.
 - These tests will cover lightweight page and component behavior for the Next.js frontend.
-- Frontend tests currently run in CI but are not required for merge.
-- Promote `frontend-test` to a required merge check after 3-5 consecutive PRs pass without flaky failures.
+- Frontend tests run in CI and are required for merge.
 - Standard frontend test command:
 
 ```bash
@@ -65,7 +64,6 @@ npm test
   - `ruff`
   - `frontend-build`
   - `frontend-lint`
-- Future required check:
   - `frontend-test`
 - Do not change branch protection or merge expectations casually; document policy updates alongside CI changes.
 
@@ -125,13 +123,11 @@ npm test
   - `ruff`
   - `frontend-build`
   - `frontend-lint`
-- Future required check:
   - `frontend-test`
 
 ### Frontend tests
 
-- `frontend-test` runs in CI but is informational for now.
-- Promote `frontend-test` to required after 3-5 consecutive PRs pass without flaky failures.
+- `frontend-test` runs in CI and must pass before merge.
 
 ### Merge readiness
 
