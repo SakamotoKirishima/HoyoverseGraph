@@ -24,10 +24,14 @@ export default function HomePage() {
     <main>
       <section className="hero">
         <p className="muted">Hoyoverse Knowledge Graph</p>
-        <h1>Graph and search tooling for lore-first exploration.</h1>
+        <h1>Explore the connections across HoYoverse worlds.</h1>
         <p>
-          Use the graph page to expand from a seed entity, inspect relationships,
-          and pressure-test the knowledge graph contract against real traversal flows.
+          A source-backed knowledge platform for researching characters, concepts,
+          factions, locations, artifacts, events, and recurring connections across
+          HoYoverse titles. Claims are linked to their sources.
+        </p>
+        <p>
+          Search for something specific or explore relationships through the graph.
         </p>
         <form className="search-form home-search" onSubmit={handleSearchSubmit}>
           <label className="field" htmlFor="home-search-query">

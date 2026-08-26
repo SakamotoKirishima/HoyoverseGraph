@@ -25,6 +25,16 @@ describe("HomePage", () => {
     mockPush.mockReset();
   });
 
+  it("introduces the platform and its research purpose", () => {
+    render(<HomePage />);
+
+    expect(screen.getByText("Hoyoverse Knowledge Graph")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /explore the connections/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/source-backed knowledge platform/i)).toBeInTheDocument();
+  });
+
   it("renders the global search entry point", () => {
     render(<HomePage />);
 
