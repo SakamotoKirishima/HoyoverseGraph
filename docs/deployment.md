@@ -170,7 +170,7 @@ Example production values:
 ```bash
 # Backend
 DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
-DATABASE_URL_DIRECT=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+DATABASE_URL_DIRECT=postgresql://<user>:<password>@<direct-host>/<database>?sslmode=require
 ALLOWED_ORIGINS=https://<production-frontend-domain>
 PORT=8000
 
@@ -190,12 +190,14 @@ Neon production or staging URLs should keep `sslmode=require`.
 - `DATABASE_URL`
   - Use the Neon pooled connection string for normal backend runtime traffic
   - Configure this in Render or Railway
+  - Neon pooled hostnames typically include `-pooler`
 - `DATABASE_URL_DIRECT`
   - Optional
   - Keep this for manual schema bootstrap, one-off admin work, or other tasks
     where you explicitly want a direct connection
   - This is documented as a separate env var, but it is not used by runtime
     application code today
+  - Use the Neon direct/unpooled hostname here, not a `-pooler` hostname
 
 ### Staging and production separation
 
@@ -244,6 +246,20 @@ python -m ingestion.ingest_entities --workbook docs/hoyoverse_ontology_v1.xlsm
 python -m ingestion.ingest_sources --workbook docs/hoyoverse_ontology_v1.xlsm
 python -m ingestion.ingest_claims --workbook docs/hoyoverse_ontology_v1.xlsm
 ```
+
+Practical ingestion dependency order:
+
+1. entities
+2. sources
+3. source assets
+4. claims
+
+Notes:
+
+- `python -m ingestion.ingest_sources` loads both `sources` and `source_assets`
+  in a single step.
+- Claims must be loaded last because they can reference entities, sources, and
+  source assets.
 
 Use the staging `DATABASE_URL` for staging ingestion and the production
 `DATABASE_URL` for production ingestion. Never point staging ingestion at the
@@ -527,6 +543,11 @@ Recommended variable mapping:
 - local secure shell `DATABASE_URL_DIRECT`
   - Neon direct connection string for manual schema/bootstrap work
 
+Important:
+
+- Keep the pooled application URL and the direct admin URL distinct.
+- Do not put a Neon `-pooler` hostname into `DATABASE_URL_DIRECT`.
+
 Do not reuse production credentials or connect staging services to the
 production database.
 
@@ -602,6 +623,9 @@ Configure:
 Because `NEXT_PUBLIC_API_BASE_URL` is a build-time public value, staging builds
 must use the staging backend URL. Do not point staging frontend builds at the
 production backend.
+
+If you change `NEXT_PUBLIC_API_BASE_URL`, you must rebuild and redeploy the
+frontend for the updated backend URL to be embedded into the client bundle.
 
 ### 7. Manually run the staging deployment workflow
 
@@ -773,6 +797,13 @@ python -m ingestion.ingest_sources --workbook docs/hoyoverse_ontology_v1.xlsm
 python -m ingestion.ingest_claims --workbook docs/hoyoverse_ontology_v1.xlsm
 ```
 
+Practical ingestion dependency order remains:
+
+1. entities
+2. sources
+3. source assets
+4. claims
+
 Warnings:
 
 - Do not run ingestion automatically during deployment.
@@ -822,6 +853,7 @@ Important:
 - `NEXT_PUBLIC_API_BASE_URL` is a public build-time value.
 - The production frontend must use the production backend URL.
 - Do not point the production frontend at the staging backend.
+- Changing `NEXT_PUBLIC_API_BASE_URL` requires a frontend rebuild/redeploy.
 
 ### 7. Configure production CORS
 
@@ -869,8 +901,7 @@ Frontend:
 
 - `npm run build`
 - `npm run lint`
-- `npm test` if frontend tests have become stable/required for your release
-  process
+- `npm test`
 
 Also confirm the corresponding staging deployment has already passed smoke
 validation for the same release candidate.
@@ -920,6 +951,42 @@ Important:
 - destructive or data-changing DB operations require a separate migration,
   backup, and recovery strategy
 - this workflow does not attempt DB rollback
+
+## Staging Validation Findings
+
+- Missing `/health/db` endpoint
+  - Fixed
+  - The endpoint now exists, returns `200` when the database is reachable, and
+    returns `503` when it is unavailable. Coverage lives in
+    `tests/test_health_api.py`.
+- Neon staging had schema but no ingested seed data
+  - Fixed
+  - Schema bootstrap and ingestion are now documented as separate required
+    manual steps. Staging must load data explicitly after schema creation.
+- `DATABASE_URL_DIRECT` was accidentally set to a pooled Neon URL
+  - Fixed in documentation
+  - This document now distinguishes pooled runtime URLs from direct admin URLs
+    and explicitly warns against using `-pooler` hostnames for
+    `DATABASE_URL_DIRECT`.
+- Vercel staging initially failed to fetch from Render
+  - Fixed/documented
+  - Staging docs now call out that `NEXT_PUBLIC_API_BASE_URL` must point to the
+    Render backend, `ALLOWED_ORIGINS` must allow the Vercel staging origin, and
+    changing `NEXT_PUBLIC_API_BASE_URL` requires a frontend rebuild/redeploy.
+- Frontend test infrastructure and smoke tests were missing
+  - Fixed
+  - Vitest, React Testing Library, smoke tests for Search/Graph/Entity Detail,
+    and the `frontend-test` workflow are now in place.
+- Clean-clone setup exposed missing dependency/setup assumptions
+  - Fixed/documented
+  - README now includes Python virtualenv setup, runtime and dev dependency
+    installation, local env file creation, Docker Postgres startup, frontend
+    `npm ci`, and startup commands from a fresh clone.
+
+Follow-up remaining:
+
+- Branch protection itself must be updated in GitHub settings if the hosted repo
+  has not already been changed to require `frontend-test`.
 
 ### Production readiness checklist
 

@@ -68,9 +68,11 @@ pytest
 
 ### Run the backend
 
-Install Python dependencies and start the API:
+Create a virtual environment, install Python dependencies, and start the API:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
 python -m uvicorn api.main:app --reload
@@ -80,7 +82,7 @@ python -m uvicorn api.main:app --reload
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
@@ -90,7 +92,7 @@ Install dependencies:
 
 ```bash
 cd frontend
-npm install
+npm ci
 ```
 
 Start the development server:
@@ -126,9 +128,7 @@ Frontend smoke tests will use:
 - jsdom
 
 These tests are planned as lightweight coverage for core pages such as search,
-graph, and entity detail. They currently run in CI but are not required for
-merge. Promote `frontend-test` to a required check after 3-5 consecutive PRs
-pass without flaky failures.
+graph, and entity detail. They run in CI and are required for merge.
 
 ### Current Merge Checks
 
@@ -138,9 +138,6 @@ Required checks today:
 - `ruff`
 - `frontend-build`
 - `frontend-lint`
-
-Future required check:
-
 - `frontend-test`
 
 ### Run all pre-commit checks
@@ -152,14 +149,15 @@ pre-commit run --all-files
 ## Empty Clone Checklist
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-dev.txt
-cd frontend && npm install && cd ..
 cp .env.example .env
 cp frontend/.env.example frontend/.env.local
 docker compose up -d
 python -m uvicorn api.main:app --reload
-cd frontend && npm run dev
+cd frontend && npm ci && npm run dev
 ```
 
 ## API (Entity Read Endpoint)
