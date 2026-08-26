@@ -220,6 +220,12 @@ main {
   gap: 16px;
 }
 
+.home-search {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  margin-top: 8px;
+}
+
 .field-grid {
   display: grid;
   gap: 14px;
@@ -408,5 +414,9 @@ main {
 
   .graph-stage {
     height: 480px;
+  }
+
+  .home-search {
+    grid-template-columns: 1fr;
   }
 }
