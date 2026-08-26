@@ -1,12 +1,6 @@
 /** @type {import('next').NextConfig} */
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 
-if (!apiBaseUrl) {
-  throw new Error(
-    "NEXT_PUBLIC_API_BASE_URL is required to configure the frontend API proxy.",
-  );
-}
-
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
