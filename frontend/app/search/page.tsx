@@ -9,7 +9,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getApiBaseUrl } from "../../lib/api";
 
 type SearchResult = {
-  entity_id: string;
+  entity_id?: string | null;
   canonical_name: string;
   display_label: string | null;
   entity_type: string;
@@ -282,18 +282,22 @@ function SearchPageContent() {
         ) : null}
 
         <div className="results">
-          {results.map((result) => {
+          {results.map((result, index) => {
             const title = result.display_label || result.canonical_name;
 
             return (
-              <article className="card" key={result.entity_id}>
+              <article className="card" key={result.entity_id || `${title}-${index}`}>
                 <h2>
-                  <Link className="card-link" href={`/entities/${result.entity_id}`}>
-                    {title}
-                  </Link>
+                  {result.entity_id ? (
+                    <Link className="card-link" href={`/entities/${result.entity_id}`}>
+                      {title}
+                    </Link>
+                  ) : (
+                    title
+                  )}
                 </h2>
                 <div className="meta-row">
-                  {result.entity_id} · {result.entity_type}
+                  {result.entity_id || "Entity ID unavailable"} · {result.entity_type}
                   {result.primary_scope_game ? ` · ${result.primary_scope_game}` : ""}
                 </div>
 
