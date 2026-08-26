@@ -1,12 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_PROXY_PATH = "/api";
 
 export function getApiBaseUrl(): string {
-  if (!API_BASE_URL) {
-    throw new Error(
-      "NEXT_PUBLIC_API_BASE_URL is not configured. Add it to frontend/.env.local or your environment.",
-    );
-  }
-  return API_BASE_URL.replace(/\/$/, "");
+  return API_PROXY_PATH;
 }
 
 export function buildApiUrl(path: string, params?: URLSearchParams): string {

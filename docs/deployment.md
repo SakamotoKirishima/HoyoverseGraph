@@ -140,7 +140,8 @@ Do not commit real `.env`, `.env.production`, or `.env.staging` files.
 
 - `NEXT_PUBLIC_API_BASE_URL`
   - Public
-  - Embedded into the Next.js bundle at build time
+  - Used at build time to configure the Next.js `/api` rewrite to the backend
+    URL, keeping browser API requests same-origin through Vercel
   - Configure this in Vercel project settings or supply it as a Docker build arg
   - `NEXT_PUBLIC_*` values must never contain secrets
 
