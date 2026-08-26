@@ -988,25 +988,195 @@ Follow-up remaining:
 - Branch protection itself must be updated in GitHub settings if the hosted repo
   has not already been changed to require `frontend-test`.
 
-### Production readiness checklist
+## Production Go-Live Checklist
 
-- [ ] production Neon DB created
-- [ ] production DB credentials stored securely
-- [ ] schema applied
-- [ ] seed data validated and loaded
-- [ ] production backend service created
-- [ ] production frontend project created
-- [ ] production environment variables configured
-- [ ] production CORS restricted correctly
-- [ ] GitHub production environment configured
-- [ ] required CI checks pass
-- [ ] staging smoke tests pass
-- [ ] `/health` passes
-- [ ] `/health/db` passes
-- [ ] Search smoke test passes
-- [ ] Graph smoke test passes
-- [ ] Entity Detail smoke test passes
-- [ ] rollback procedure documented
+Status legend for this checklist:
+
+- `[ ]` not yet verified
+- `[x]` already verified and applicable to production readiness
+- `N/A` not applicable for this release or deployment shape
+
+Important:
+
+- Do not mark a production item complete only because staging passed.
+- Statuses below reflect repository evidence and the completed staging
+  validation context available during checklist preparation on 2026-08-26.
+
+### 1. Code readiness
+
+- [ ] `main` branch is current with the approved release content
+- [ ] working tree is clean
+- [ ] required CI check passed: `pytest`
+- [ ] required CI check passed: `ruff`
+- [ ] required CI check passed: `frontend-build`
+- [ ] required CI check passed: `frontend-lint`
+- [ ] required CI check passed: `frontend-test`
+- [x] final staging regression passed
+- [ ] no known release-blocking issues remain
+
+Notes:
+
+- Verify the working tree is clean again immediately before the release cut.
+- The current local branch during checklist preparation is not `main`, so
+  `main` currency still needs explicit verification at release time.
+- Required CI checks are defined in [README.md](../README.md),
+  [AGENTS.md](../AGENTS.md), and `.github/workflows/`.
+
+### 2. Production database
+
+- [ ] dedicated Neon production branch or database created or confirmed
+- [ ] production database is confirmed separate from staging
+- [ ] production pooled `DATABASE_URL` obtained
+- [ ] production direct or unpooled `DATABASE_URL_DIRECT` obtained
+- [ ] production schema initialized with the documented bootstrap procedure
+- [ ] production seed data loaded intentionally if required for go-live
+- [ ] referential integrity verified after schema bootstrap and any data load
+- [ ] expected production row counts verified
+- [ ] production database connectivity verified
+- [x] production credential reuse from staging is explicitly prohibited by documentation
+- [ ] production configuration verified not to reuse staging credentials in practice
+
+Notes:
+
+- The documented bootstrap procedure is `psql "$DATABASE_URL_DIRECT" -f db/schema.sql`
+  with a pooled-URL fallback if no direct URL is kept.
+- No migration framework exists today; schema bootstrap remains a manual
+  operator step.
+- `ingestion.ingest_sources` loads both `sources` and `source_assets`, so the
+  explicit seed/load verification should cover both tables.
+
+### 3. Production backend
+
+- [ ] Render production service created or confirmed
+- [ ] production backend deploys from the approved production branch or commit
+- [ ] production `DATABASE_URL` configured in Render
+- [ ] production `ALLOWED_ORIGINS` configured in Render
+- [x] `/health` is documented as the platform health check path
+- [ ] `/health` returns `200` in production
+- [ ] `/health/db` returns `200` in production
+- [ ] Search API verified against the production database
+- [ ] Graph API verified against the production database
+- [ ] Entity Detail API verified against the production database
+- [x] documentation explicitly requires production backend separation from staging credentials
+- [ ] production environment variables verified not to reuse staging values accidentally
+
+### 4. Production frontend
+
+- [ ] Vercel production deployment created or confirmed
+- [ ] `NEXT_PUBLIC_API_BASE_URL` configured with the production Render backend URL
+- [ ] frontend rebuilt and redeployed after setting `NEXT_PUBLIC_API_BASE_URL`
+- [ ] frontend verified to use the production backend rather than staging
+- [ ] production frontend domain verified
+
+Notes:
+
+- `frontend/lib/api.ts` requires `NEXT_PUBLIC_API_BASE_URL`, and the current
+  frontend treats it as a build-time value.
+
+### 5. CORS
+
+- [ ] production `ALLOWED_ORIGINS` contains only approved production frontend origin(s)
+- [ ] staging Vercel domain is not treated as production unless intentionally approved
+- [x] wildcard CORS is not documented as an acceptable production configuration
+- [ ] allowed production origin validated successfully
+- [ ] arbitrary non-approved origin validated as blocked
+
+Notes:
+
+- CORS parsing and allowlist behavior are covered by `tests/test_cors.py`.
+- Release-time verification still needs to be done against the deployed
+  production backend with real production origins.
+
+### 6. Application regression
+
+- [x] final staging regression passed
+- [ ] Search works in production
+- [ ] Search empty state works in production
+- [ ] Graph depth 1 works in production
+- [ ] Graph depth 2 works in production
+- [ ] Graph filters work in production
+- [ ] Entity Detail works in production
+- [ ] claims render in production
+- [ ] sources render in production
+- [ ] evidence assets render in production
+- [ ] provenance panel works in production
+- [ ] Search -> Entity -> Graph navigation works in production
+- [ ] invalid entity handling works in production
+
+### 7. Security and configuration
+
+- [ ] `npm audit` shows no known high-severity vulnerabilities for the release
+- [ ] secrets are not committed
+- [ ] production credentials exist only in Neon, Render, Vercel, or GitHub secret stores as appropriate
+- [x] `.env` files are documented to remain gitignored and uncommitted
+- [ ] debug or development configuration is not enabled in production
+- [ ] production frontend and backend URLs use HTTPS
+
+Notes:
+
+- The checked-in repo includes `.env.example`, `.env.staging.example`,
+  `.env.production.example`, and frontend equivalents as templates only.
+- This checklist does not treat the presence of example env files as evidence
+  that live production secrets are configured correctly.
+
+### 8. Operational readiness
+
+- [ ] Render logs are accessible to the production owner or operator
+- [ ] Vercel deployment logs are accessible to the production owner or operator
+- [ ] Neon monitoring and console access are available to the production owner or operator
+- [x] rollback procedure is documented
+- [x] previous known-good deployment or commit can be identified from deploy histories and Git
+- [x] database rollback limitations are documented
+- [ ] production owner or on-call contact is explicitly identified, if applicable
+
+Notes:
+
+- Current rollback guidance covers Vercel and Render redeploys, and it
+  explicitly notes that database rollback is not automatic.
+
+### 9. Post-deployment verification
+
+Run these checks immediately after a future production deployment:
+
+```bash
+curl -fsS https://<production-backend-domain>/health
+curl -fsS https://<production-backend-domain>/health/db
+curl -fsS "https://<production-backend-domain>/search?q=kaslana"
+curl -fsS "https://<production-backend-domain>/graph?seed_entity_id=ENT-0804&depth=1"
+curl -fsS "https://<production-backend-domain>/entities/ENT-0804"
+```
+
+Then verify in a browser:
+
+- [ ] frontend Search works
+- [ ] frontend Search empty state works
+- [ ] Graph page renders and requests production data
+- [ ] Entity Detail page renders and requests production data
+- [ ] browser console has no release-blocking errors
+- [ ] browser network requests target production backend URLs only
+- [ ] CORS allows the approved production origin
+- [ ] CORS does not grant access to an arbitrary non-approved origin
+
+### 10. GO / NO-GO decision
+
+GO only when:
+
+- [ ] all required checklist items pass
+- [x] staging regression passed
+- [ ] production health checks pass
+- [ ] production DB contains expected data
+- [ ] frontend and backend integration passes in production
+- [ ] no release-blocking issue remains
+
+NO-GO if any of the following is true:
+
+- [ ] required CI fails
+- [ ] DB health fails
+- [ ] CORS is configured incorrectly
+- [ ] production frontend points to staging or local backend
+- [ ] production data is missing or incomplete
+- [ ] a critical user flow fails
+- [ ] secrets or security configuration are incorrect
 
 ## Recommended First Rollout Order
 
