@@ -42,6 +42,16 @@ describe("HomePage", () => {
     expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
   });
 
+  it("renders a secondary explore graph action that links to the graph page", () => {
+    render(<HomePage />);
+
+    const exploreGraphLink = screen.getByRole("link", { name: "Explore Graph" });
+
+    expect(exploreGraphLink).toBeInTheDocument();
+    expect(exploreGraphLink).toHaveAttribute("href", "/graph");
+    expect(screen.getByText("Explore relationships visually.")).toBeInTheDocument();
+  });
+
   it("navigates to the URL-backed search page when submitted", () => {
     render(<HomePage />);
 

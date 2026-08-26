@@ -33,27 +33,30 @@ export default function HomePage() {
         <p>
           Search for something specific or explore relationships through the graph.
         </p>
-        <form className="search-form home-search" onSubmit={handleSearchSubmit}>
-          <label className="field" htmlFor="home-search-query">
-            <span className="label">Search the knowledge graph</span>
-            <input
-              className="control"
-              id="home-search-query"
-              name="q"
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search characters, concepts, factions, locations..."
-            />
-          </label>
-          <button className="primary-button" type="submit">
-            Search
-          </button>
-        </form>
-        <div className="hero-links">
-          <Link className="hero-link" href="/graph">
-            Open Graph Page
-          </Link>
+        <div className="hero-actions">
+          <form className="search-form home-search" onSubmit={handleSearchSubmit}>
+            <label className="field" htmlFor="home-search-query">
+              <span className="label">Search the knowledge graph</span>
+              <input
+                className="control"
+                id="home-search-query"
+                name="q"
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search characters, concepts, factions, locations..."
+              />
+            </label>
+            <button className="primary-button" type="submit">
+              Search
+            </button>
+          </form>
+          <div className="hero-links">
+            <Link className="hero-link hero-link-secondary" href="/graph">
+              Explore Graph
+            </Link>
+            <p className="hero-link-copy">Explore relationships visually.</p>
+          </div>
         </div>
       </section>
     </main>
