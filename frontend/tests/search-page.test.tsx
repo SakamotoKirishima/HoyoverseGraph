@@ -95,7 +95,8 @@ describe("SearchPage", () => {
 
     render(<SearchPage />);
 
-    expect(await screen.findByText("Kiana")).toBeInTheDocument();
+    const kianaLink = await screen.findByRole("link", { name: "Kiana" });
+    expect(kianaLink).toHaveAttribute("href", "/entities/ENT-0804");
     expect(screen.getByText(/ENT-0804 · character · Multi/)).toBeInTheDocument();
     expect(screen.getByText("Aliases: Kiana")).toBeInTheDocument();
     expect(
@@ -104,6 +105,64 @@ describe("SearchPage", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Sources: 2")).toBeInTheDocument();
+  });
+
+  it("links each result to its corresponding entity detail page", async () => {
+    mockSearchParams = new URLSearchParams({ q: "kaslana" });
+    mockFetchJson([
+      {
+        entity_id: "ENT-0804",
+        canonical_name: "Kiana Kaslana",
+        display_label: "Kiana",
+        entity_type: "character",
+        primary_scope_game: "Multi",
+        aliases: [],
+        short_description: null,
+        source_count: 2,
+      },
+      {
+        entity_id: "ENT-0811",
+        canonical_name: "Kiana Kaslana (St. Freya)",
+        display_label: "Kiana (Early)",
+        entity_type: "character_iteration",
+        primary_scope_game: "Honkai Impact 3",
+        aliases: [],
+        short_description: null,
+        source_count: 2,
+      },
+    ]);
+
+    render(<SearchPage />);
+
+    expect(await screen.findByRole("link", { name: "Kiana" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0804",
+    );
+    expect(screen.getByRole("link", { name: "Kiana (Early)" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0811",
+    );
+  });
+
+  it("does not render a broken detail link for a result without an entity ID", async () => {
+    mockSearchParams = new URLSearchParams({ q: "unknown" });
+    mockFetchJson([
+      {
+        canonical_name: "Unidentified record",
+        display_label: null,
+        entity_type: "concept",
+        primary_scope_game: null,
+        aliases: [],
+        short_description: null,
+        source_count: 0,
+      },
+    ]);
+
+    render(<SearchPage />);
+
+    expect(await screen.findByText("Unidentified record")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Unidentified record" })).toBeNull();
+    expect(screen.getByText(/Entity ID unavailable/)).toBeInTheDocument();
   });
 
   it("shows an empty state when the search returns no results", async () => {
