@@ -5,6 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import HomePage from "../app/page";
 
 const mockPush = vi.fn();
+const FEATURED_ENTITY_LINKS = [
+  { name: "Kiana Kaslana", href: "/entities/ENT-0804" },
+  { name: "Raiden Shogun", href: "/entities/ENT-0121" },
+  { name: "Inazuma", href: "/entities/ENT-0003" },
+  { name: "Teyvat", href: "/entities/ENT-0099" },
+];
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: { children: ReactNode; href: string }) => (
@@ -50,6 +56,37 @@ describe("HomePage", () => {
     expect(exploreGraphLink).toBeInTheDocument();
     expect(exploreGraphLink).toHaveAttribute("href", "/graph");
     expect(screen.getByText("Explore relationships visually.")).toBeInTheDocument();
+  });
+
+  it("renders curated featured entity entry points", () => {
+    render(<HomePage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Featured entities" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Curated editorial entry points/i),
+    ).toBeInTheDocument();
+
+    const featuredLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href")?.startsWith("/entities/"));
+
+    expect(featuredLinks).toHaveLength(FEATURED_ENTITY_LINKS.length);
+
+    for (const entity of FEATURED_ENTITY_LINKS) {
+      expect(screen.getByRole("heading", { name: entity.name })).toBeInTheDocument();
+      expect(featuredLinks.some((link) => link.getAttribute("href") === entity.href)).toBe(true);
+    }
+  });
+
+  it("does not render the embedded graph explorer on home", () => {
+    render(<HomePage />);
+
+    expect(screen.queryByRole("button", { name: "Load graph" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Enter a seed entity ID like ENT-0804 before loading the graph/i),
+    ).not.toBeInTheDocument();
   });
 
   it("navigates to the URL-backed search page when submitted", () => {
