@@ -52,6 +52,43 @@ describe("HomePage", () => {
     expect(screen.getByText("Explore relationships visually.")).toBeInTheDocument();
   });
 
+  it("renders curated featured entity entry points", () => {
+    render(<HomePage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Featured entities" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Curated editorial entry points/i),
+    ).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Kiana Kaslana" }).closest("a")).toHaveAttribute(
+      "href",
+      "/entities/ENT-0804",
+    );
+    expect(screen.getByRole("heading", { name: "Raiden Shogun" }).closest("a")).toHaveAttribute(
+      "href",
+      "/entities/ENT-0121",
+    );
+    expect(screen.getByRole("heading", { name: "Inazuma" }).closest("a")).toHaveAttribute(
+      "href",
+      "/entities/ENT-0003",
+    );
+    expect(screen.getByRole("heading", { name: "Teyvat" }).closest("a")).toHaveAttribute(
+      "href",
+      "/entities/ENT-0099",
+    );
+  });
+
+  it("does not render the embedded graph explorer on home", () => {
+    render(<HomePage />);
+
+    expect(screen.queryByRole("button", { name: "Load graph" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Enter a seed entity ID like ENT-0804 before loading the graph/i),
+    ).not.toBeInTheDocument();
+  });
+
   it("navigates to the URL-backed search page when submitted", () => {
     render(<HomePage />);
 

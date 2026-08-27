@@ -260,6 +260,61 @@ main {
   margin-top: 24px;
 }
 
+.discovery-section {
+  display: grid;
+  gap: 18px;
+}
+
+.discovery-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.featured-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.featured-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 253, 247, 0.96);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+}
+
+.featured-card:hover {
+  border-color: var(--accent);
+}
+
+.featured-card:focus-visible {
+  outline: 3px solid rgba(181, 90, 56, 0.28);
+  outline-offset: 3px;
+}
+
+.featured-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.featured-card-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.featured-meta,
+.featured-description {
+  margin: 0;
+  color: var(--muted);
+}
+
 .graph-shell {
   display: grid;
   gap: 18px;
