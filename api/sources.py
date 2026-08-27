@@ -178,12 +178,232 @@ class SourceDeleteConflictResponse(BaseModel):
     total_references: int
 
 
+class SourceDetailSource(BaseModel):
+    """Canonical source payload for source detail pages."""
+
+    source_id: str = Field(description="Source identifier in SRC-{DOMAIN}-#### format.")
+    title: str = Field(description="Canonical source title.")
+    url: str | None = Field(default=None, description="Optional public URL for the source.")
+    source_type: str = Field(description="Source type classification.")
+    source_format: str = Field(description="Source format classification.")
+    game: str | None = Field(default=None, description="Canonical game association when available.")
+    scope: str | None = Field(default=None, description="Optional source scope classification.")
+    reliability_tier: str | None = Field(
+        default=None,
+        description="Optional source reliability tier.",
+    )
+    language: str | None = Field(default=None, description="Optional source language code.")
+    publication_date: date | None = Field(
+        default=None,
+        description="Optional publication date.",
+    )
+    notes: str | None = Field(default=None, description="Optional source notes.")
+
+
+class SourceDetailAsset(BaseModel):
+    """Source asset payload for source detail pages."""
+
+    asset_id: str = Field(description="Asset identifier in AST-{DOMAIN}-#### format.")
+    source_id: str = Field(description="Source identifier linked to this asset.")
+    asset_type: str = Field(description="Asset type classification.")
+    file_path_or_url: str | None = Field(
+        default=None,
+        description="Optional asset file path or URL.",
+    )
+    locator: str | None = Field(default=None, description="Optional asset locator or citation pointer.")
+    description: str | None = Field(default=None, description="Optional asset description.")
+    is_primary_evidence: bool | None = Field(
+        default=None,
+        description="Whether the asset is marked as primary evidence.",
+    )
+    notes: str | None = Field(default=None, description="Optional asset notes.")
+
+
+class SourceDetailEntityRef(BaseModel):
+    """Reusable lightweight entity reference for source-linked claims."""
+
+    entity_id: str = Field(description="Entity identifier in ENT-#### format.")
+    canonical_name: str = Field(description="Canonical entity name.")
+    display_label: str | None = Field(
+        default=None,
+        description="Preferred frontend label when different from canonical_name.",
+    )
+    entity_type: str = Field(description="Ontology entity type code.")
+    primary_scope_game: str | None = Field(
+        default=None,
+        description="Canonical primary scope game when available.",
+    )
+
+
+class SourceDetailClaim(BaseModel):
+    """Source-centric claim payload with lightweight entity labels."""
+
+    claim_id: str = Field(description="Claim identifier in CLM-#### format.")
+    subject: SourceDetailEntityRef = Field(
+        description="Subject entity summary preserving subject -> predicate -> object direction."
+    )
+    predicate: str = Field(description="Exact claim predicate code.")
+    object: SourceDetailEntityRef = Field(description="Object entity summary for the claim.")
+    evidence_status: str | None = Field(
+        default=None,
+        description="Optional evidence strength or provenance status for the claim.",
+    )
+    confidence: float | None = Field(
+        default=None,
+        description="Optional claim confidence between 0 and 1.",
+    )
+    asset_id: str | None = Field(
+        default=None,
+        description="Optional linked source asset identifier.",
+    )
+    locator: str | None = Field(
+        default=None,
+        description="Optional source or asset locator for the claim.",
+    )
+    note: str | None = Field(default=None, description="Optional claim note.")
+    review_status: str | None = Field(
+        default=None,
+        description="Optional review workflow status.",
+    )
+    claim_status: str | None = Field(
+        default=None,
+        description="Optional claim lifecycle status.",
+    )
+
+
+class SourceDetailSummary(BaseModel):
+    """Aggregate counts for source detail pages."""
+
+    claim_count: int = Field(description="Count of returned unique claims.")
+    asset_count: int = Field(description="Count of returned unique assets.")
+    primary_evidence_asset_count: int = Field(
+        description="Count of returned assets where is_primary_evidence is true."
+    )
+    related_entity_count: int = Field(
+        description="Count of unique subject/object entity IDs across returned claims."
+    )
+
+
+class SourceDetailResponse(BaseModel):
+    """Consolidated source detail response contract."""
+
+    source: SourceDetailSource = Field(description="Canonical source metadata for the detail page.")
+    assets: list[SourceDetailAsset] = Field(
+        default_factory=list,
+        description="All deduped assets linked to the source, sorted by asset_id ascending.",
+    )
+    claims: list[SourceDetailClaim] = Field(
+        default_factory=list,
+        description="All deduped claims linked to the source, sorted by claim_id ascending.",
+    )
+    summary: SourceDetailSummary = Field(
+        description="Aggregate counts derived from the returned claims and assets."
+    )
+
+
 def _trim_or_none(value: str | None) -> str | None:
     """Trim whitespace and convert empty strings to None."""
     if value is None:
         return None
     stripped = value.strip()
     return stripped if stripped else None
+
+
+def _row_to_source_detail_source(row: dict[str, Any]) -> SourceDetailSource:
+    """Map a canonical source row to the source-detail source model."""
+    return SourceDetailSource(
+        source_id=row["source_id"],
+        title=row["title"],
+        url=row.get("url"),
+        source_type=row["source_type"],
+        source_format=row["source_format"],
+        game=row.get("game"),
+        scope=row.get("scope"),
+        reliability_tier=row.get("reliability_tier"),
+        language=row.get("language"),
+        publication_date=row.get("publication_date"),
+        notes=row.get("notes"),
+    )
+
+
+def _row_to_source_detail_asset(row: dict[str, Any]) -> SourceDetailAsset:
+    """Map a source asset row to the source-detail asset model."""
+    return SourceDetailAsset(
+        asset_id=row["asset_id"],
+        source_id=row["source_id"],
+        asset_type=row["asset_type"],
+        file_path_or_url=row.get("file_path_or_url"),
+        locator=row.get("locator"),
+        description=row.get("description"),
+        is_primary_evidence=row.get("is_primary_evidence"),
+        notes=row.get("notes"),
+    )
+
+
+def _row_to_source_detail_entity_ref(
+    row: dict[str, Any], *, prefix: str
+) -> SourceDetailEntityRef:
+    """Map a prefixed entity summary row to the source-detail entity ref model."""
+    return SourceDetailEntityRef(
+        entity_id=row[f"{prefix}_entity_id"],
+        canonical_name=row[f"{prefix}_canonical_name"],
+        display_label=row.get(f"{prefix}_display_label"),
+        entity_type=row[f"{prefix}_entity_type"],
+        primary_scope_game=row.get(f"{prefix}_primary_scope_game"),
+    )
+
+
+def _row_to_source_detail_claim(row: dict[str, Any]) -> SourceDetailClaim:
+    """Map a source-linked claim row to the source-detail claim model."""
+    return SourceDetailClaim(
+        claim_id=row["claim_id"],
+        subject=_row_to_source_detail_entity_ref(row, prefix="subject"),
+        predicate=row["predicate"],
+        object=_row_to_source_detail_entity_ref(row, prefix="object"),
+        evidence_status=row.get("evidence_status"),
+        confidence=row.get("confidence"),
+        asset_id=row.get("asset_id"),
+        locator=row.get("locator"),
+        note=row.get("note"),
+        review_status=row.get("review_status"),
+        claim_status=row.get("claim_status"),
+    )
+
+
+def _dedupe_source_detail_assets(asset_rows: list[dict[str, Any]]) -> list[SourceDetailAsset]:
+    """Return unique assets sorted by asset_id ascending for source detail responses."""
+    assets_by_id: dict[str, SourceDetailAsset] = {}
+    for row in asset_rows:
+        asset = _row_to_source_detail_asset(row)
+        assets_by_id[asset.asset_id] = asset
+    return [assets_by_id[asset_id] for asset_id in sorted(assets_by_id)]
+
+
+def _dedupe_source_detail_claims(claim_rows: list[dict[str, Any]]) -> list[SourceDetailClaim]:
+    """Return unique claims sorted by claim_id ascending for source detail responses."""
+    claims_by_id: dict[str, SourceDetailClaim] = {}
+    for row in claim_rows:
+        claim = _row_to_source_detail_claim(row)
+        claims_by_id[claim.claim_id] = claim
+    return [claims_by_id[claim_id] for claim_id in sorted(claims_by_id)]
+
+
+def _build_source_detail_summary(
+    claims: list[SourceDetailClaim], assets: list[SourceDetailAsset]
+) -> SourceDetailSummary:
+    """Build aggregate source-detail counts from the returned payload collections."""
+    related_entity_ids = {
+        entity_id
+        for claim in claims
+        for entity_id in (claim.subject.entity_id, claim.object.entity_id)
+    }
+    primary_asset_count = sum(1 for asset in assets if asset.is_primary_evidence is True)
+    return SourceDetailSummary(
+        claim_count=len(claims),
+        asset_count=len(assets),
+        primary_evidence_asset_count=primary_asset_count,
+        related_entity_count=len(related_entity_ids),
+    )
 
 
 def _is_plausible_url(value: str) -> bool:

@@ -148,3 +148,147 @@ def test_game_normalization_aliases() -> None:
     assert normalize_primary_scope_game("Genshin") == "Genshin Impact"
     assert normalize_primary_scope_game("GGZ") == "Gun Girls Z"
     assert normalize_primary_scope_game("Cross-title") == "Multi"
+
+
+def test_source_detail_asset_dedupe_and_sort() -> None:
+    asset_rows = [
+        {
+            "asset_id": "AST-HI3-0002",
+            "source_id": "SRC-HI3-0001",
+            "asset_type": "document",
+            "file_path_or_url": None,
+            "locator": "Appendix",
+            "description": "Secondary evidence",
+            "is_primary_evidence": False,
+            "notes": None,
+        },
+        {
+            "asset_id": "AST-HI3-0001",
+            "source_id": "SRC-HI3-0001",
+            "asset_type": "screenshot",
+            "file_path_or_url": None,
+            "locator": "Chapter 1, scene X",
+            "description": "Story evidence screenshot",
+            "is_primary_evidence": True,
+            "notes": None,
+        },
+        {
+            "asset_id": "AST-HI3-0001",
+            "source_id": "SRC-HI3-0001",
+            "asset_type": "screenshot",
+            "file_path_or_url": None,
+            "locator": "Chapter 1, scene X",
+            "description": "Story evidence screenshot",
+            "is_primary_evidence": True,
+            "notes": None,
+        },
+    ]
+
+    assets = sources._dedupe_source_detail_assets(asset_rows)
+
+    assert [asset.asset_id for asset in assets] == ["AST-HI3-0001", "AST-HI3-0002"]
+
+
+def test_source_detail_claim_dedupe_sort_and_summary() -> None:
+    claim_rows = [
+        {
+            "claim_id": "CLM-0002",
+            "subject_entity_id": "ENT-0001",
+            "subject_canonical_name": "Honkai Impact 3",
+            "subject_display_label": "Honkai Impact 3",
+            "subject_entity_type": "game",
+            "subject_primary_scope_game": "Honkai Impact 3",
+            "predicate": "features",
+            "object_entity_id": "ENT-0804",
+            "object_canonical_name": "Kiana Kaslana",
+            "object_display_label": "Kiana",
+            "object_entity_type": "character",
+            "object_primary_scope_game": "Multi",
+            "evidence_status": "official_confirmed",
+            "confidence": 1.0,
+            "asset_id": None,
+            "locator": "Chapter 2",
+            "note": None,
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0804",
+            "subject_canonical_name": "Kiana Kaslana",
+            "subject_display_label": "Kiana",
+            "subject_entity_type": "character",
+            "subject_primary_scope_game": "Multi",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0001",
+            "object_canonical_name": "Honkai Impact 3",
+            "object_display_label": "Honkai Impact 3",
+            "object_entity_type": "game",
+            "object_primary_scope_game": "Honkai Impact 3",
+            "evidence_status": "official_confirmed",
+            "confidence": 1.0,
+            "asset_id": "AST-HI3-0001",
+            "locator": "Chapter 1",
+            "note": None,
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0804",
+            "subject_canonical_name": "Kiana Kaslana",
+            "subject_display_label": "Kiana",
+            "subject_entity_type": "character",
+            "subject_primary_scope_game": "Multi",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0001",
+            "object_canonical_name": "Honkai Impact 3",
+            "object_display_label": "Honkai Impact 3",
+            "object_entity_type": "game",
+            "object_primary_scope_game": "Honkai Impact 3",
+            "evidence_status": "official_confirmed",
+            "confidence": 1.0,
+            "asset_id": "AST-HI3-0001",
+            "locator": "Chapter 1",
+            "note": None,
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+    ]
+    assets = [
+        sources.SourceDetailAsset(
+            asset_id="AST-HI3-0001",
+            source_id="SRC-HI3-0001",
+            asset_type="screenshot",
+            file_path_or_url=None,
+            locator="Chapter 1, scene X",
+            description="Story evidence screenshot",
+            is_primary_evidence=True,
+            notes=None,
+        ),
+        sources.SourceDetailAsset(
+            asset_id="AST-HI3-0002",
+            source_id="SRC-HI3-0001",
+            asset_type="document",
+            file_path_or_url=None,
+            locator="Appendix",
+            description="Secondary evidence",
+            is_primary_evidence=False,
+            notes=None,
+        ),
+    ]
+
+    claims = sources._dedupe_source_detail_claims(claim_rows)
+    summary = sources._build_source_detail_summary(claims, assets)
+
+    assert [claim.claim_id for claim in claims] == ["CLM-0001", "CLM-0002"]
+    assert claims[0].subject.canonical_name == "Kiana Kaslana"
+    assert claims[0].subject.display_label == "Kiana"
+    assert claims[0].object.canonical_name == "Honkai Impact 3"
+    assert claims[1].asset_id is None
+    assert summary.model_dump() == {
+        "claim_count": 2,
+        "asset_count": 2,
+        "primary_evidence_asset_count": 1,
+        "related_entity_count": 2,
+    }
