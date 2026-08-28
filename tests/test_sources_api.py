@@ -144,6 +144,177 @@ def test_get_source_missing_returns_404(
     assert response.status_code == 404
 
 
+def test_get_source_detail_returns_consolidated_related_data(
+    client: TestClient,
+    sample_source_row: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asset_rows = [
+        {
+            "asset_id": "AST-GI-0002",
+            "source_id": "SRC-GI-0001",
+            "asset_type": "document",
+            "file_path_or_url": None,
+            "locator": "Appendix",
+            "description": "Unreferenced supporting document",
+            "is_primary_evidence": False,
+            "notes": None,
+        },
+        {
+            "asset_id": "AST-GI-0001",
+            "source_id": "SRC-GI-0001",
+            "asset_type": "screenshot",
+            "file_path_or_url": None,
+            "locator": "Character Profile",
+            "description": "Profile capture",
+            "is_primary_evidence": True,
+            "notes": None,
+        },
+        {
+            "asset_id": "AST-GI-0001",
+            "source_id": "SRC-GI-0001",
+            "asset_type": "screenshot",
+            "file_path_or_url": None,
+            "locator": "Character Profile",
+            "description": "Profile capture",
+            "is_primary_evidence": True,
+            "notes": None,
+        },
+    ]
+    claim_rows = [
+        {
+            "claim_id": "CLM-0002",
+            "subject_entity_id": "ENT-0003",
+            "subject_canonical_name": "Genshin Impact",
+            "subject_display_label": "Genshin Impact",
+            "subject_entity_type": "game",
+            "subject_primary_scope_game": "Genshin Impact",
+            "predicate": "features",
+            "object_entity_id": "ENT-0807",
+            "object_canonical_name": "Raiden Shogun",
+            "object_display_label": "Raiden",
+            "object_entity_type": "character",
+            "object_primary_scope_game": "Genshin Impact",
+            "evidence_status": "official_confirmed",
+            "confidence": 0.9,
+            "asset_id": None,
+            "locator": "Chapter 2",
+            "note": None,
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0807",
+            "subject_canonical_name": "Raiden Shogun",
+            "subject_display_label": "Raiden",
+            "subject_entity_type": "character",
+            "subject_primary_scope_game": "Genshin Impact",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0003",
+            "object_canonical_name": "Genshin Impact",
+            "object_display_label": "Genshin Impact",
+            "object_entity_type": "game",
+            "object_primary_scope_game": "Genshin Impact",
+            "evidence_status": "official_confirmed",
+            "confidence": 1.0,
+            "asset_id": "AST-GI-0001",
+            "locator": "Character Profile",
+            "note": "Direct profile evidence.",
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+        {
+            "claim_id": "CLM-0001",
+            "subject_entity_id": "ENT-0807",
+            "subject_canonical_name": "Raiden Shogun",
+            "subject_display_label": "Raiden",
+            "subject_entity_type": "character",
+            "subject_primary_scope_game": "Genshin Impact",
+            "predicate": "appears_in",
+            "object_entity_id": "ENT-0003",
+            "object_canonical_name": "Genshin Impact",
+            "object_display_label": "Genshin Impact",
+            "object_entity_type": "game",
+            "object_primary_scope_game": "Genshin Impact",
+            "evidence_status": "official_confirmed",
+            "confidence": 1.0,
+            "asset_id": "AST-GI-0001",
+            "locator": "Character Profile",
+            "note": "Direct profile evidence.",
+            "review_status": "approved",
+            "claim_status": "active",
+        },
+    ]
+    monkeypatch.setattr(sources, "_fetch_source_by_id", lambda _c, _id: sample_source_row)
+    monkeypatch.setattr(
+        sources, "_fetch_source_detail_assets_by_source_id", lambda _c, _id: asset_rows
+    )
+    monkeypatch.setattr(
+        sources, "_fetch_source_detail_claims_by_source_id", lambda _c, _id: claim_rows
+    )
+
+    response = client.get("/sources/SRC-GI-0001/detail")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == sample_source_row
+    assert [asset["asset_id"] for asset in body["assets"]] == ["AST-GI-0001", "AST-GI-0002"]
+    assert body["assets"][1]["description"] == "Unreferenced supporting document"
+    assert [claim["claim_id"] for claim in body["claims"]] == ["CLM-0001", "CLM-0002"]
+    assert body["claims"][0]["subject"] == {
+        "entity_id": "ENT-0807",
+        "canonical_name": "Raiden Shogun",
+        "display_label": "Raiden",
+        "entity_type": "character",
+        "primary_scope_game": "Genshin Impact",
+    }
+    assert body["claims"][0]["predicate"] == "appears_in"
+    assert body["claims"][0]["object"]["entity_id"] == "ENT-0003"
+    assert body["claims"][1]["asset_id"] is None
+    assert body["summary"] == {
+        "claim_count": 2,
+        "asset_count": 2,
+        "primary_evidence_asset_count": 1,
+        "related_entity_count": 2,
+    }
+
+
+def test_get_source_detail_empty_related_data_returns_zero_summary(
+    client: TestClient,
+    sample_source_row: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sources, "_fetch_source_by_id", lambda _c, _id: sample_source_row)
+    monkeypatch.setattr(sources, "_fetch_source_detail_assets_by_source_id", lambda _c, _id: [])
+    monkeypatch.setattr(sources, "_fetch_source_detail_claims_by_source_id", lambda _c, _id: [])
+
+    response = client.get("/sources/SRC-GI-0001/detail")
+
+    assert response.status_code == 200
+    assert response.json()["assets"] == []
+    assert response.json()["claims"] == []
+    assert response.json()["summary"] == {
+        "claim_count": 0,
+        "asset_count": 0,
+        "primary_evidence_asset_count": 0,
+        "related_entity_count": 0,
+    }
+
+
+def test_get_source_detail_malformed_id_returns_422(client: TestClient) -> None:
+    response = client.get("/sources/not-a-source/detail")
+    assert response.status_code == 422
+
+
+def test_get_source_detail_missing_returns_404(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(sources, "_fetch_source_by_id", lambda _c, _id: None)
+    response = client.get("/sources/SRC-GI-9999/detail")
+    assert response.status_code == 404
+
+
 def test_get_source_provenance_valid_returns_200(
     client: TestClient,
     sample_source_row: dict[str, Any],
