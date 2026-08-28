@@ -79,6 +79,31 @@ const sampleDetailResponse = {
       review_status: "approved",
       claim_status: "active",
     },
+    {
+      claim_id: "CLM-0002",
+      subject: {
+        entity_id: "ENT-0901",
+        canonical_name: "Entity C",
+        display_label: null,
+        entity_type: "character",
+        primary_scope_game: "Honkai Impact 3",
+      },
+      predicate: "identity_variant",
+      object: {
+        entity_id: "ENT-0902",
+        canonical_name: "Entity D",
+        display_label: "Variant D",
+        entity_type: "character",
+        primary_scope_game: "Honkai Impact 3",
+      },
+      evidence_status: "editorial_inference",
+      confidence: 0.8,
+      asset_id: null,
+      locator: null,
+      note: "Recorded without a source-specific asset.",
+      review_status: "draft",
+      claim_status: "active",
+    },
   ],
   summary: {
     claim_count: 1,
@@ -134,11 +159,13 @@ describe("SourceDetailPage", () => {
     expect(screen.getByText("Primary evidence assets")).toBeInTheDocument();
     expect(screen.getAllByText("1").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Evidence assets" })).toBeInTheDocument();
-    expect(screen.getByText("AST-HI3-0001")).toBeInTheDocument();
+    expect(screen.getAllByText("AST-HI3-0001")).toHaveLength(2);
     expect(screen.getByText("Story evidence screenshot")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Supported claims" })).toBeInTheDocument();
     expect(screen.getByText("CLM-0001")).toBeInTheDocument();
-    expect(screen.getByText(/Kiana.*appears_in.*Honkai Impact 3/)).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Subject Kiana; relationship Appears in; object Honkai Impact 3"),
+    ).toBeInTheDocument();
   });
 
   it("renders formatted canonical metadata, the original URL, and notes", async () => {
@@ -199,6 +226,82 @@ describe("SourceDetailPage", () => {
       within(evidenceSection).getByText("evidence/hi3/chapter-01/transcript.txt"),
     ).toBeInTheDocument();
     expect(within(evidenceSection).getAllByRole("link", { name: "View evidence" })).toHaveLength(1);
+  });
+
+  it("renders directional source-supported claims and their stored metadata", async () => {
+    mockFetchJson(sampleDetailResponse);
+
+    await renderSourcePage();
+
+    const claimsHeading = await screen.findByRole("heading", { name: "Supported claims" });
+    const claimsSection = claimsHeading.closest("section");
+    if (!claimsSection) {
+      throw new Error("Supported claims section was not rendered.");
+    }
+
+    expect(within(claimsSection).getByText("CLM-0001")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("CLM-0002")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Kiana")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Honkai Impact 3")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("ENT-0804")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("ENT-0001")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Appears in")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Official confirmed")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("1")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("AST-HI3-0001")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Chapter 1")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Approved")).toBeInTheDocument();
+    expect(within(claimsSection).getAllByText("Active")).toHaveLength(2);
+    expect(within(claimsSection).getByText("Identity variant")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Entity C")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Variant D")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Recorded without a source-specific asset.")).toBeInTheDocument();
+
+    const relationships = within(claimsSection).getAllByLabelText(/Subject .* relationship .* object/);
+    expect(relationships[0]).toHaveAccessibleName(
+      "Subject Kiana; relationship Appears in; object Honkai Impact 3",
+    );
+    expect(relationships[1]).toHaveAccessibleName(
+      "Subject Entity C; relationship Identity variant; object Variant D",
+    );
+    expect(within(claimsSection).getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("preserves subject-to-object claim direction", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      claims: [
+        {
+          ...sampleDetailResponse.claims[0],
+          claim_id: "CLM-0003",
+          subject: {
+            ...sampleDetailResponse.claims[0].subject,
+            entity_id: "ENT-0001",
+            canonical_name: "Entity A",
+            display_label: "Entity A",
+          },
+          predicate: "opposes",
+          object: {
+            ...sampleDetailResponse.claims[0].object,
+            entity_id: "ENT-0002",
+            canonical_name: "Entity B",
+            display_label: "Entity B",
+          },
+        },
+      ],
+    });
+
+    await renderSourcePage();
+
+    const relationship = await screen.findByLabelText(
+      "Subject Entity A; relationship Opposes; object Entity B",
+    );
+    expect(relationship).toHaveTextContent("Entity A");
+    expect(relationship).toHaveTextContent("Opposes");
+    expect(relationship).toHaveTextContent("Entity B");
+    expect(relationship).not.toHaveAccessibleName(
+      "Subject Entity B; relationship Opposes; object Entity A",
+    );
   });
 
   it("uses a neutral placeholder for nullable metadata and omits a null URL", async () => {

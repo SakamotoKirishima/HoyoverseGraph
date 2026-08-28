@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { buildApiUrl } from "../lib/api";
 import { SourceEvidenceAssets } from "./SourceEvidenceAssets";
 import { SourceMetadataSection } from "./SourceMetadataSection";
+import { SourceSupportedClaims } from "./SourceSupportedClaims";
 
 export type SourceDetailSource = {
   source_id: string;
@@ -70,10 +71,6 @@ export type SourceDetailResponse = {
 type ApiErrorPayload = {
   detail?: string | string[];
 };
-
-function claimEntityLabel(entity: SourceDetailEntityRef): string {
-  return entity.display_label?.trim() || entity.canonical_name;
-}
 
 export function SourceDetailView({ sourceId }: { sourceId: string }) {
   const [data, setData] = useState<SourceDetailResponse | null>(null);
@@ -227,27 +224,7 @@ export function SourceDetailView({ sourceId }: { sourceId: string }) {
 
           <SourceEvidenceAssets assets={data.assets} />
 
-          <section className="panel detail-section" aria-labelledby="supported-claims-heading">
-            <h2 className="section-title" id="supported-claims-heading" style={{ fontSize: "1.8rem" }}>
-              Supported claims
-            </h2>
-            {data.claims.length > 0 ? (
-              <div className="detail-grid" style={{ marginTop: 16 }}>
-                {data.claims.map((claim) => (
-                  <article className="detail-card" key={claim.claim_id}>
-                    <h3 className="code-line">{claim.claim_id}</h3>
-                    <p className="muted" style={{ marginTop: 8 }}>
-                      {claimEntityLabel(claim.subject)} → {claim.predicate} → {claimEntityLabel(claim.object)}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted" style={{ marginTop: 16 }}>
-                No claims currently reference this source.
-              </p>
-            )}
-          </section>
+          <SourceSupportedClaims claims={data.claims} />
         </>
       ) : null}
     </main>

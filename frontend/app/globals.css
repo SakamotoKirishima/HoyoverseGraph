@@ -490,6 +490,65 @@ main {
   margin: 0;
 }
 
+.claim-card {
+  display: grid;
+  gap: 16px;
+}
+
+.claim-relationship {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.7fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.claim-endpoint,
+.claim-predicate {
+  min-width: 0;
+}
+
+.claim-role,
+.claim-entity-name,
+.claim-predicate-name {
+  margin: 0;
+}
+
+.claim-role {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.claim-entity-name,
+.claim-predicate-name {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.claim-direction-arrow {
+  color: var(--accent-dark);
+  font-size: 1.25rem;
+}
+
+.claim-metadata-list {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.claim-metadata-list > div {
+  min-width: 0;
+}
+
+.claim-metadata-list dd {
+  overflow-wrap: anywhere;
+}
+
+.claim-note {
+  grid-column: 1 / -1;
+}
+
 .code-line {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.95rem;
@@ -512,5 +571,13 @@ main {
 
   .hero-actions {
     gap: 14px;
+  }
+
+  .claim-relationship {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-direction-arrow {
+    transform: rotate(90deg);
   }
 }
