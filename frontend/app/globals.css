@@ -527,6 +527,22 @@ main {
   overflow-wrap: anywhere;
 }
 
+.claim-entity-link {
+  color: var(--accent-dark);
+  text-decoration: underline;
+  text-decoration-color: rgba(181, 90, 56, 0.45);
+  text-underline-offset: 0.15em;
+}
+
+.claim-entity-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.claim-entity-link:focus-visible {
+  outline: 3px solid rgba(181, 90, 56, 0.28);
+  outline-offset: 3px;
+}
+
 .claim-direction-arrow {
   color: var(--accent-dark);
   font-size: 1.25rem;

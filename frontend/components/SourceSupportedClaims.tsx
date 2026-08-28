@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { SourceDetailClaim, SourceDetailEntityRef } from "./SourceDetailView";
 import {
   EMPTY_DETAIL_VALUE,
@@ -6,11 +8,33 @@ import {
 } from "../lib/source-detail-formatting";
 
 function entityLabel(entity: SourceDetailEntityRef): string {
-  return entity.display_label?.trim() || entity.canonical_name?.trim() || entity.entity_id;
+  const entityId = typeof entity.entity_id === "string" ? entity.entity_id.trim() : "";
+
+  return entity.display_label?.trim() || entity.canonical_name?.trim() || entityId || "Unnamed entity";
 }
 
 function formatConfidence(confidence: number | null): string {
   return confidence === null ? EMPTY_DETAIL_VALUE : String(confidence);
+}
+
+function ClaimEntityReference({ entity }: { entity: SourceDetailEntityRef }) {
+  const label = entityLabel(entity);
+  const entityId = typeof entity.entity_id === "string" ? entity.entity_id.trim() : "";
+
+  return (
+    <>
+      <p className="claim-entity-name">
+        {entityId ? (
+          <Link className="claim-entity-link" href={`/entities/${encodeURIComponent(entityId)}`}>
+            {label}
+          </Link>
+        ) : (
+          label
+        )}
+      </p>
+      <p className="code-line muted">{entityId || EMPTY_DETAIL_VALUE}</p>
+    </>
+  );
 }
 
 export function SourceSupportedClaims({ claims }: { claims: SourceDetailClaim[] }) {
@@ -32,8 +56,7 @@ export function SourceSupportedClaims({ claims }: { claims: SourceDetailClaim[] 
               >
                 <div className="claim-endpoint">
                   <p className="claim-role">Subject</p>
-                  <p className="claim-entity-name">{entityLabel(claim.subject)}</p>
-                  <p className="code-line muted">{claim.subject.entity_id}</p>
+                  <ClaimEntityReference entity={claim.subject} />
                 </div>
                 <span className="claim-direction-arrow" aria-hidden="true">→</span>
                 <div className="claim-predicate">
@@ -43,8 +66,7 @@ export function SourceSupportedClaims({ claims }: { claims: SourceDetailClaim[] 
                 <span className="claim-direction-arrow" aria-hidden="true">→</span>
                 <div className="claim-endpoint">
                   <p className="claim-role">Object</p>
-                  <p className="claim-entity-name">{entityLabel(claim.object)}</p>
-                  <p className="code-line muted">{claim.object.entity_id}</p>
+                  <ClaimEntityReference entity={claim.object} />
                 </div>
               </div>
               <dl className="detail-list claim-metadata-list">

@@ -304,6 +304,92 @@ describe("SourceDetailPage", () => {
     );
   });
 
+  it("links each claim endpoint to its entity detail route without linking predicates or claims", async () => {
+    mockFetchJson(sampleDetailResponse);
+
+    await renderSourcePage();
+
+    const claimsHeading = await screen.findByRole("heading", { name: "Supported claims" });
+    const claimsSection = claimsHeading.closest("section");
+    if (!claimsSection) {
+      throw new Error("Supported claims section was not rendered.");
+    }
+
+    expect(within(claimsSection).getByRole("link", { name: "Kiana" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0804",
+    );
+    expect(within(claimsSection).getByRole("link", { name: "Honkai Impact 3" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0001",
+    );
+    expect(within(claimsSection).getByRole("link", { name: "Entity C" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0901",
+    );
+    expect(within(claimsSection).getByRole("link", { name: "Variant D" })).toHaveAttribute(
+      "href",
+      "/entities/ENT-0902",
+    );
+    expect(within(claimsSection).queryByRole("link", { name: "Appears in" })).not.toBeInTheDocument();
+    expect(within(claimsSection).queryByRole("link", { name: "CLM-0001" })).not.toBeInTheDocument();
+    expect(within(claimsSection).getByText("ENT-0804")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("ENT-0001")).toBeInTheDocument();
+  });
+
+  it("keeps repeated entity occurrences linked to the same entity detail route", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      claims: [
+        sampleDetailResponse.claims[0],
+        {
+          ...sampleDetailResponse.claims[1],
+          claim_id: "CLM-0004",
+          subject: sampleDetailResponse.claims[0].subject,
+        },
+      ],
+    });
+
+    await renderSourcePage();
+
+    const links = await screen.findAllByRole("link", { name: "Kiana" });
+    expect(links).toHaveLength(2);
+    links.forEach((link) => expect(link).toHaveAttribute("href", "/entities/ENT-0804"));
+  });
+
+  it("renders endpoint labels without malformed links when an entity ID is absent", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      claims: [
+        {
+          ...sampleDetailResponse.claims[0],
+          subject: {
+            ...sampleDetailResponse.claims[0].subject,
+            entity_id: undefined as unknown as string,
+          },
+          object: {
+            ...sampleDetailResponse.claims[0].object,
+            entity_id: null as unknown as string,
+          },
+        },
+      ],
+    });
+
+    await renderSourcePage();
+
+    const claimsHeading = await screen.findByRole("heading", { name: "Supported claims" });
+    const claimsSection = claimsHeading.closest("section");
+    if (!claimsSection) {
+      throw new Error("Supported claims section was not rendered.");
+    }
+
+    expect(within(claimsSection).getByText("Kiana")).toBeInTheDocument();
+    expect(within(claimsSection).getByText("Honkai Impact 3")).toBeInTheDocument();
+    expect(within(claimsSection).queryByRole("link", { name: "Kiana" })).not.toBeInTheDocument();
+    expect(within(claimsSection).queryByRole("link", { name: "Honkai Impact 3" })).not.toBeInTheDocument();
+    expect(within(claimsSection).queryByRole("link", { name: /undefined|null/i })).not.toBeInTheDocument();
+  });
+
   it("uses a neutral placeholder for nullable metadata and omits a null URL", async () => {
     mockFetchJson({
       ...sampleDetailResponse,
