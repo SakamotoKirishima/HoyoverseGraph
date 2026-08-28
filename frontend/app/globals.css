@@ -480,6 +480,16 @@ main {
   overflow-wrap: anywhere;
 }
 
+.evidence-card {
+  display: grid;
+  gap: 16px;
+}
+
+.evidence-status {
+  justify-self: start;
+  margin: 0;
+}
+
 .code-line {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.95rem;

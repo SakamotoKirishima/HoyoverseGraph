@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { buildApiUrl } from "../lib/api";
+import { SourceEvidenceAssets } from "./SourceEvidenceAssets";
 import { SourceMetadataSection } from "./SourceMetadataSection";
 
 export type SourceDetailSource = {
@@ -224,27 +225,7 @@ export function SourceDetailView({ sourceId }: { sourceId: string }) {
 
           <SourceMetadataSection source={source} />
 
-          <section className="panel detail-section" aria-labelledby="evidence-assets-heading">
-            <h2 className="section-title" id="evidence-assets-heading" style={{ fontSize: "1.8rem" }}>
-              Evidence assets
-            </h2>
-            {data.assets.length > 0 ? (
-              <div className="detail-grid" style={{ marginTop: 16 }}>
-                {data.assets.map((asset) => (
-                  <article className="detail-card" key={asset.asset_id}>
-                    <h3 className="code-line">{asset.asset_id}</h3>
-                    <p className="muted" style={{ marginTop: 8 }}>{asset.asset_type}</p>
-                    {asset.locator ? <p className="muted">{asset.locator}</p> : null}
-                    {asset.description ? <p className="muted">{asset.description}</p> : null}
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted" style={{ marginTop: 16 }}>
-                No evidence assets are recorded for this source.
-              </p>
-            )}
-          </section>
+          <SourceEvidenceAssets assets={data.assets} />
 
           <section className="panel detail-section" aria-labelledby="supported-claims-heading">
             <h2 className="section-title" id="supported-claims-heading" style={{ fontSize: "1.8rem" }}>

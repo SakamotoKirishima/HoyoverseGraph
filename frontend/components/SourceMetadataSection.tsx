@@ -1,23 +1,9 @@
 import type { SourceDetailSource } from "./SourceDetailView";
-
-const EMPTY_METADATA_VALUE = "—";
-
-function formatEnumValue(value: string | null): string {
-  if (!value?.trim()) {
-    return EMPTY_METADATA_VALUE;
-  }
-
-  const normalized = value.replaceAll("_", " ").trim().toLowerCase();
-  return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
-}
-
-function formatOptionalValue(value: string | null): string {
-  return value?.trim() || EMPTY_METADATA_VALUE;
-}
+import { EMPTY_DETAIL_VALUE, formatEnumValue, formatOptionalValue } from "../lib/source-detail-formatting";
 
 function formatPublicationDate(value: string | null): string {
   if (!value?.trim()) {
-    return EMPTY_METADATA_VALUE;
+    return EMPTY_DETAIL_VALUE;
   }
 
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);

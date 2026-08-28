@@ -26,10 +26,30 @@ const sampleDetailResponse = {
       asset_id: "AST-HI3-0001",
       source_id: "SRC-HI3-0001",
       asset_type: "screenshot",
-      file_path_or_url: null,
+      file_path_or_url: "https://example.com/evidence/hi3-chapter-1.png",
       locator: "Chapter 1",
       description: "Story evidence screenshot",
       is_primary_evidence: true,
+      notes: "Captured from the English client.",
+    },
+    {
+      asset_id: "AST-HI3-0002",
+      source_id: "SRC-HI3-0001",
+      asset_type: "transcript_excerpt",
+      file_path_or_url: "evidence/hi3/chapter-01/transcript.txt",
+      locator: "Chapter 1, Scene 3",
+      description: "Unreferenced transcript evidence.",
+      is_primary_evidence: false,
+      notes: null,
+    },
+    {
+      asset_id: "AST-HI3-0003",
+      source_id: "SRC-HI3-0001",
+      asset_type: "web_archive",
+      file_path_or_url: null,
+      locator: null,
+      description: null,
+      is_primary_evidence: null,
       notes: null,
     },
   ],
@@ -144,6 +164,41 @@ describe("SourceDetailPage", () => {
     expect(sourceLink).toHaveAttribute("href", "https://example.com/hi3/chapter-1");
     expect(sourceLink).toHaveAttribute("target", "_blank");
     expect(sourceLink).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("renders every source asset with evidence status and reference behavior", async () => {
+    mockFetchJson(sampleDetailResponse);
+
+    await renderSourcePage();
+
+    const evidenceHeading = await screen.findByRole("heading", { name: "Evidence assets" });
+    const evidenceSection = evidenceHeading.closest("section");
+    if (!evidenceSection) {
+      throw new Error("Evidence assets section was not rendered.");
+    }
+
+    expect(within(evidenceSection).getAllByRole("heading")).toHaveLength(4);
+    expect(within(evidenceSection).getByText("AST-HI3-0001")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("AST-HI3-0002")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("AST-HI3-0003")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Screenshot")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Transcript excerpt")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Web archive")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Chapter 1, Scene 3")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Unreferenced transcript evidence.")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Captured from the English client.")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Primary evidence")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Supporting evidence")).toBeInTheDocument();
+    expect(within(evidenceSection).getByText("Evidence status not specified")).toBeInTheDocument();
+
+    const evidenceLink = within(evidenceSection).getByRole("link", { name: "View evidence" });
+    expect(evidenceLink).toHaveAttribute("href", "https://example.com/evidence/hi3-chapter-1.png");
+    expect(evidenceLink).toHaveAttribute("target", "_blank");
+    expect(evidenceLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(
+      within(evidenceSection).getByText("evidence/hi3/chapter-01/transcript.txt"),
+    ).toBeInTheDocument();
+    expect(within(evidenceSection).getAllByRole("link", { name: "View evidence" })).toHaveLength(1);
   });
 
   it("uses a neutral placeholder for nullable metadata and omits a null URL", async () => {
