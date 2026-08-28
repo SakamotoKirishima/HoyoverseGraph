@@ -166,10 +166,9 @@ describe("EntityDetailPage", () => {
 
     expect(screen.getByText("Related Sources (1)")).toBeInTheDocument();
     expect(screen.getAllByText("Internal Editorial Mapping").length).toBeGreaterThan(0);
-    const sourceLink = screen.getAllByRole("link", {
-      name: "https://example.com/internal-mapping",
-    })[0];
+    const sourceLink = screen.getAllByRole("link", { name: "View original source" })[0];
     expect(sourceLink).toHaveAttribute("href", "https://example.com/internal-mapping");
+    expect(sourceLink).toHaveAttribute("rel", "noopener noreferrer");
 
     expect(screen.getByText("Linked Evidence Assets (1)")).toBeInTheDocument();
     expect(screen.getAllByText("AST-INT-0001").length).toBeGreaterThan(0);
@@ -206,9 +205,7 @@ describe("EntityDetailPage", () => {
     });
     expect(screen.getAllByText("SRC-INT-0001").length).toBeGreaterThan(0);
 
-    const externalLinks = screen.getAllByRole("link", {
-      name: "https://example.com/internal-mapping",
-    });
+    const externalLinks = screen.getAllByRole("link", { name: "View original source" });
     expect(externalLinks).toHaveLength(2);
     externalLinks.forEach((link) => {
       expect(link).toHaveAttribute("href", "https://example.com/internal-mapping");

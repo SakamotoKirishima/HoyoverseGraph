@@ -1,10 +1,11 @@
 import type { SourceDetailAsset } from "./SourceDetailView";
+import { ExternalLink } from "./ExternalLink";
 import {
   EMPTY_DETAIL_VALUE,
   formatEnumValue,
   formatOptionalValue,
-  isHttpUrl,
 } from "../lib/source-detail-formatting";
+import { isHttpUrl } from "../lib/external-links";
 
 function evidenceStatus(asset: SourceDetailAsset): string {
   if (asset.is_primary_evidence === true) {
@@ -25,7 +26,7 @@ export function SourceEvidenceAssets({ assets }: { assets: SourceDetailAsset[] }
       {assets.length > 0 ? (
         <div className="detail-grid" style={{ marginTop: 16 }}>
           {assets.map((asset) => {
-            const evidenceReference = asset.file_path_or_url?.trim() || null;
+            const evidenceReference = asset.file_path_or_url?.trim() ? asset.file_path_or_url : null;
             const isExternalEvidence = evidenceReference ? isHttpUrl(evidenceReference) : false;
 
             return (
@@ -48,14 +49,9 @@ export function SourceEvidenceAssets({ assets }: { assets: SourceDetailAsset[] }
                     <dt>{isExternalEvidence ? "Evidence" : "Evidence reference"}</dt>
                     <dd>
                       {isExternalEvidence && evidenceReference ? (
-                        <a
-                          className="external-link"
-                          href={evidenceReference}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
+                        <ExternalLink href={evidenceReference}>
                           View evidence
-                        </a>
+                        </ExternalLink>
                       ) : evidenceReference ? (
                         <span className="code-line">{evidenceReference}</span>
                       ) : (

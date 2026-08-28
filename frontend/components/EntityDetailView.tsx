@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { buildApiUrl } from "../lib/api";
+import { isHttpUrl } from "../lib/external-links";
+import { ExternalLink } from "./ExternalLink";
 import {
   getSourceIdValue,
   getSourceTitleValue,
@@ -97,10 +99,6 @@ function formatOptional(value: string | null): string {
 
 function formatConfidence(value: number | null): string {
   return value === null ? "Not provided" : value.toString();
-}
-
-function isExternalUrl(value: string | null): boolean {
-  return Boolean(value && /^https?:\/\//i.test(value));
 }
 
 function getGraphLink(
@@ -470,15 +468,8 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                       <div>
                         <dt>URL</dt>
                         <dd>
-                          {source.url ? (
-                            <a
-                              className="external-link"
-                              href={source.url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {source.url}
-                            </a>
+                          {isHttpUrl(source.url) ? (
+                            <ExternalLink href={source.url}>View original source</ExternalLink>
                           ) : (
                             "No public URL"
                           )}
@@ -538,16 +529,9 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                     <div>
                       <dt>File or URL</dt>
                       <dd>
-                        {asset.file_path_or_url ? (
-                          isExternalUrl(asset.file_path_or_url) ? (
-                            <a
-                              className="external-link"
-                              href={asset.file_path_or_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {asset.file_path_or_url}
-                            </a>
+                        {asset.file_path_or_url?.trim() ? (
+                          isHttpUrl(asset.file_path_or_url) ? (
+                            <ExternalLink href={asset.file_path_or_url}>View evidence</ExternalLink>
                           ) : (
                             <span className="code-line">{asset.file_path_or_url}</span>
                           )
@@ -667,15 +651,8 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                           <div>
                             <dt>URL</dt>
                             <dd>
-                              {linkedSource.url ? (
-                                <a
-                                  className="external-link"
-                                  href={linkedSource.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  {linkedSource.url}
-                                </a>
+                              {isHttpUrl(linkedSource.url) ? (
+                                <ExternalLink href={linkedSource.url}>View original source</ExternalLink>
                               ) : (
                                 "No public URL"
                               )}
@@ -714,16 +691,11 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                           <div>
                             <dt>File or URL</dt>
                             <dd>
-                              {linkedAsset.file_path_or_url ? (
-                                isExternalUrl(linkedAsset.file_path_or_url) ? (
-                                  <a
-                                    className="external-link"
-                                    href={linkedAsset.file_path_or_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    {linkedAsset.file_path_or_url}
-                                  </a>
+                              {linkedAsset.file_path_or_url?.trim() ? (
+                                isHttpUrl(linkedAsset.file_path_or_url) ? (
+                                  <ExternalLink href={linkedAsset.file_path_or_url}>
+                                    View evidence
+                                  </ExternalLink>
                                 ) : (
                                   <span className="code-line">{linkedAsset.file_path_or_url}</span>
                                 )

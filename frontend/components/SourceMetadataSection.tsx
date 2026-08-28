@@ -1,5 +1,7 @@
 import type { SourceDetailSource } from "./SourceDetailView";
+import { ExternalLink } from "./ExternalLink";
 import { EMPTY_DETAIL_VALUE, formatEnumValue, formatOptionalValue } from "../lib/source-detail-formatting";
+import { isHttpUrl } from "../lib/external-links";
 
 function formatPublicationDate(value: string | null): string {
   if (!value?.trim()) {
@@ -22,7 +24,7 @@ function formatPublicationDate(value: string | null): string {
 }
 
 export function SourceMetadataSection({ source }: { source: SourceDetailSource }) {
-  const sourceUrl = source.url?.trim() || null;
+  const sourceUrl = isHttpUrl(source.url) ? source.url : null;
 
   return (
     <section className="panel detail-section" aria-labelledby="source-metadata-heading">
@@ -66,14 +68,9 @@ export function SourceMetadataSection({ source }: { source: SourceDetailSource }
           <div>
             <dt>Source URL</dt>
             <dd>
-              <a
-                className="external-link"
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <ExternalLink href={sourceUrl}>
                 View original source
-              </a>
+              </ExternalLink>
             </dd>
           </div>
         ) : null}

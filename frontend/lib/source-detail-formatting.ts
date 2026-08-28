@@ -12,12 +12,3 @@ export function formatEnumValue(value: string | null): string {
 export function formatOptionalValue(value: string | null): string {
   return value?.trim() || EMPTY_DETAIL_VALUE;
 }
-
-export function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}

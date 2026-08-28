@@ -418,6 +418,36 @@ describe("SourceDetailPage", () => {
     expect(within(metadata).queryByRole("link", { name: "View original source" })).not.toBeInTheDocument();
   });
 
+  it("does not create external links for unsafe source or evidence URLs", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      source: {
+        ...sampleDetailResponse.source,
+        url: "javascript:alert(1)",
+      },
+      assets: [
+        {
+          ...sampleDetailResponse.assets[0],
+          file_path_or_url: "data:text/html,test",
+        },
+      ],
+    });
+
+    await renderSourcePage();
+
+    await screen.findByRole("heading", { name: "Source metadata" });
+    const metadata = getMetadataSection();
+    expect(within(metadata).queryByRole("link", { name: "View original source" })).not.toBeInTheDocument();
+
+    const evidenceHeading = screen.getByRole("heading", { name: "Evidence assets" });
+    const evidenceSection = evidenceHeading.closest("section");
+    if (!evidenceSection) {
+      throw new Error("Evidence assets section was not rendered.");
+    }
+    expect(within(evidenceSection).getByText("data:text/html,test")).toBeInTheDocument();
+    expect(within(evidenceSection).queryByRole("link", { name: "View evidence" })).not.toBeInTheDocument();
+  });
+
   it("renders explicit empty asset and claim states", async () => {
     mockFetchJson({
       ...sampleDetailResponse,
