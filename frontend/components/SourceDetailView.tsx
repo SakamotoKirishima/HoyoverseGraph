@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { buildApiUrl } from "../lib/api";
+import { SourceMetadataSection } from "./SourceMetadataSection";
 
 export type SourceDetailSource = {
   source_id: string;
@@ -68,10 +69,6 @@ export type SourceDetailResponse = {
 type ApiErrorPayload = {
   detail?: string | string[];
 };
-
-function formatOptional(value: string | null): string {
-  return value && value.trim() ? value : "Not specified";
-}
 
 function claimEntityLabel(entity: SourceDetailEntityRef): string {
   return entity.display_label?.trim() || entity.canonical_name;
@@ -225,41 +222,7 @@ export function SourceDetailView({ sourceId }: { sourceId: string }) {
             </div>
           </section>
 
-          <section className="panel detail-section" aria-labelledby="source-metadata-heading">
-            <h2 className="section-title" id="source-metadata-heading" style={{ fontSize: "1.8rem" }}>
-              Source metadata
-            </h2>
-            <dl className="detail-list" style={{ marginTop: 16 }}>
-              <div>
-                <dt>Source type</dt>
-                <dd>{source.source_type}</dd>
-              </div>
-              <div>
-                <dt>Source format</dt>
-                <dd>{source.source_format}</dd>
-              </div>
-              <div>
-                <dt>Game</dt>
-                <dd>{formatOptional(source.game)}</dd>
-              </div>
-              <div>
-                <dt>Scope</dt>
-                <dd>{formatOptional(source.scope)}</dd>
-              </div>
-              <div>
-                <dt>Reliability tier</dt>
-                <dd>{formatOptional(source.reliability_tier)}</dd>
-              </div>
-              <div>
-                <dt>Language</dt>
-                <dd>{formatOptional(source.language)}</dd>
-              </div>
-              <div>
-                <dt>Publication date</dt>
-                <dd>{formatOptional(source.publication_date)}</dd>
-              </div>
-            </dl>
-          </section>
+          <SourceMetadataSection source={source} />
 
           <section className="panel detail-section" aria-labelledby="evidence-assets-heading">
             <h2 className="section-title" id="evidence-assets-heading" style={{ fontSize: "1.8rem" }}>

@@ -467,9 +467,23 @@ main {
   color: var(--muted);
 }
 
+.source-metadata-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.source-metadata-list > div {
+  min-width: 0;
+}
+
+.source-metadata-list dd {
+  overflow-wrap: anywhere;
+}
+
 .code-line {
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 0.95rem;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import SourceDetailPage from "../app/sources/[sourceId]/page";
@@ -11,15 +11,15 @@ const sampleDetailResponse = {
   source: {
     source_id: "SRC-HI3-0001",
     title: "HI3 Main Story Chapter 1",
-    url: null,
+    url: "https://example.com/hi3/chapter-1",
     source_type: "official_story",
     source_format: "in_game_text",
     game: "Honkai Impact 3",
     scope: "main_story",
     reliability_tier: "tier_1",
     language: "en",
-    publication_date: null,
-    notes: null,
+    publication_date: "2023-07-18",
+    notes: "Primary canon source with scene-level references.",
   },
   assets: [
     {
@@ -84,6 +84,20 @@ async function renderSourcePage(sourceId = "SRC-HI3-0001") {
   return render(page);
 }
 
+function getMetadataSection(): HTMLElement {
+  const heading = screen.getByRole("heading", { name: "Source metadata" });
+  const section = heading.closest("section");
+  if (!section) {
+    throw new Error("Source metadata section was not rendered.");
+  }
+  return section;
+}
+
+function getMetadataValue(section: HTMLElement, label: string): HTMLElement | null {
+  const term = within(section).getByText(label);
+  return term.nextElementSibling as HTMLElement | null;
+}
+
 describe("SourceDetailPage", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
@@ -95,7 +109,7 @@ describe("SourceDetailPage", () => {
     await renderSourcePage();
 
     expect(await screen.findByRole("heading", { name: "HI3 Main Story Chapter 1" })).toBeInTheDocument();
-    expect(screen.getByText("SRC-HI3-0001")).toBeInTheDocument();
+    expect(screen.getAllByText("SRC-HI3-0001")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Summary" })).toBeInTheDocument();
     expect(screen.getByText("Primary evidence assets")).toBeInTheDocument();
     expect(screen.getAllByText("1").length).toBeGreaterThan(0);
@@ -105,6 +119,59 @@ describe("SourceDetailPage", () => {
     expect(screen.getByRole("heading", { name: "Supported claims" })).toBeInTheDocument();
     expect(screen.getByText("CLM-0001")).toBeInTheDocument();
     expect(screen.getByText(/Kiana.*appears_in.*Honkai Impact 3/)).toBeInTheDocument();
+  });
+
+  it("renders formatted canonical metadata, the original URL, and notes", async () => {
+    mockFetchJson(sampleDetailResponse);
+
+    await renderSourcePage();
+
+    await screen.findByRole("heading", { name: "Source metadata" });
+    const metadata = getMetadataSection();
+    expect(getMetadataValue(metadata, "Source ID")).toHaveTextContent("SRC-HI3-0001");
+    expect(getMetadataValue(metadata, "Source type")).toHaveTextContent("Official story");
+    expect(getMetadataValue(metadata, "Source format")).toHaveTextContent("In game text");
+    expect(getMetadataValue(metadata, "Game")).toHaveTextContent("Honkai Impact 3");
+    expect(getMetadataValue(metadata, "Scope")).toHaveTextContent("Main story");
+    expect(getMetadataValue(metadata, "Reliability tier")).toHaveTextContent("Tier 1");
+    expect(getMetadataValue(metadata, "Language")).toHaveTextContent("en");
+    expect(getMetadataValue(metadata, "Publication date")).toHaveTextContent("Jul 18, 2023");
+    expect(getMetadataValue(metadata, "Notes")).toHaveTextContent(
+      "Primary canon source with scene-level references.",
+    );
+
+    const sourceLink = within(metadata).getByRole("link", { name: "View original source" });
+    expect(sourceLink).toHaveAttribute("href", "https://example.com/hi3/chapter-1");
+    expect(sourceLink).toHaveAttribute("target", "_blank");
+    expect(sourceLink).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("uses a neutral placeholder for nullable metadata and omits a null URL", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      source: {
+        ...sampleDetailResponse.source,
+        url: null,
+        game: null,
+        scope: null,
+        reliability_tier: null,
+        language: null,
+        publication_date: null,
+        notes: null,
+      },
+    });
+
+    await renderSourcePage();
+
+    await screen.findByRole("heading", { name: "Source metadata" });
+    const metadata = getMetadataSection();
+    expect(getMetadataValue(metadata, "Game")).toHaveTextContent("—");
+    expect(getMetadataValue(metadata, "Scope")).toHaveTextContent("—");
+    expect(getMetadataValue(metadata, "Reliability tier")).toHaveTextContent("—");
+    expect(getMetadataValue(metadata, "Language")).toHaveTextContent("—");
+    expect(getMetadataValue(metadata, "Publication date")).toHaveTextContent("—");
+    expect(getMetadataValue(metadata, "Notes")).toHaveTextContent("—");
+    expect(within(metadata).queryByRole("link", { name: "View original source" })).not.toBeInTheDocument();
   });
 
   it("renders explicit empty asset and claim states", async () => {
