@@ -10,8 +10,7 @@ Available pages:
 - [Entity Detail API](./entity-detail.md)
 - [Source Detail API](./source-detail.md)
 
-These pages focus on implemented frontend-facing endpoints plus contract-first
-detail pages that may be completed in follow-up backend tasks:
+These pages document the implemented frontend-facing endpoints:
 
 - `GET /search`
 - `GET /graph`

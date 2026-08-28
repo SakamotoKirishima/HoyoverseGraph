@@ -2,9 +2,8 @@
 
 ## Status
 
-This page defines the stable contract for the planned source-centric detail
-endpoint. In this subtask, the contract and response models are defined, but
-repository/database retrieval is intentionally not implemented yet.
+This endpoint is implemented in the source router and defines the stable
+source-centric detail response for Source Inspector pages.
 
 ## Endpoint
 
@@ -168,7 +167,7 @@ Notes:
 - `display_label` is additive display data.
 - `display_label` does not replace `canonical_name`.
 
-## Suggested Response Models
+## Response Models
 
 - `SourceDetailResponse`
 - `SourceDetailSource`

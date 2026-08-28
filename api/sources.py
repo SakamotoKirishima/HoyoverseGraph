@@ -643,6 +643,67 @@ def _fetch_assets_by_source_id(conn: Connection[Any], source_id: str) -> list[di
     return rows if rows is not None else []
 
 
+def _fetch_source_detail_assets_by_source_id(
+    conn: Connection[Any], source_id: str
+) -> list[dict[str, Any]]:
+    """Fetch full asset rows for the source detail response."""
+    sql = """
+        SELECT
+            asset_id,
+            source_id,
+            asset_type,
+            file_path_or_url,
+            locator,
+            description,
+            is_primary_evidence,
+            notes
+        FROM source_assets
+        WHERE source_id = %(source_id)s
+        ORDER BY asset_id ASC;
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"source_id": source_id})
+        rows = cur.fetchall()
+    return rows if rows is not None else []
+
+
+def _fetch_source_detail_claims_by_source_id(
+    conn: Connection[Any], source_id: str
+) -> list[dict[str, Any]]:
+    """Fetch source-linked claims with subject and object entity summaries."""
+    sql = """
+        SELECT
+            c.claim_id,
+            c.predicate,
+            c.evidence_status,
+            c.confidence,
+            c.asset_id,
+            c.locator,
+            c.note,
+            c.review_status,
+            c.claim_status,
+            subject.entity_id AS subject_entity_id,
+            subject.canonical_name AS subject_canonical_name,
+            subject.display_label AS subject_display_label,
+            subject.entity_type AS subject_entity_type,
+            subject.primary_scope_game AS subject_primary_scope_game,
+            object.entity_id AS object_entity_id,
+            object.canonical_name AS object_canonical_name,
+            object.display_label AS object_display_label,
+            object.entity_type AS object_entity_type,
+            object.primary_scope_game AS object_primary_scope_game
+        FROM claims AS c
+        JOIN entities AS subject ON subject.entity_id = c.subject_entity_id
+        JOIN entities AS object ON object.entity_id = c.object_entity_id
+        WHERE c.source_id = %(source_id)s
+        ORDER BY c.claim_id ASC;
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"source_id": source_id})
+        rows = cur.fetchall()
+    return rows if rows is not None else []
+
+
 def _count_inbound_source_references(conn: Connection[Any], source_id: str) -> tuple[int, int, int]:
     """Count inbound source references from source_assets and claims."""
     sql = """
@@ -869,6 +930,59 @@ def _delete_source(conn: Connection[Any], source_id: str) -> bool:
     with conn.cursor() as cur:
         cur.execute(sql, {"source_id": source_id})
         return cur.rowcount > 0
+
+
+@router.get(
+    "/{source_id}/detail",
+    response_model=SourceDetailResponse,
+    summary="Retrieve consolidated source detail data",
+    description=(
+        "Return canonical source metadata together with all source assets, source-linked claims, "
+        "lightweight subject/object entity references, and aggregate counts."
+    ),
+    response_description="Consolidated source detail payload for Source Inspector pages.",
+    responses={
+        404: {"description": "Source detail record was not found."},
+        422: {"description": "Validation error for malformed source_id."},
+        500: {"description": "Unexpected backend or database error."},
+    },
+)
+def get_source_detail(
+    source_id: str = ApiPath(
+        ...,
+        pattern=SOURCE_ID_PATTERN,
+        description="Source ID in SRC-{DOMAIN}-#### format.",
+    ),
+    conn: Connection[Any] = Depends(get_db_connection),
+) -> SourceDetailResponse:
+    """Return consolidated source detail data for Source Inspector pages."""
+    try:
+        source_row = _fetch_source_by_id(conn, source_id)
+        if source_row is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Source not found for id '{source_id}'.",
+            )
+
+        assets = _dedupe_source_detail_assets(
+            _fetch_source_detail_assets_by_source_id(conn, source_id)
+        )
+        claims = _dedupe_source_detail_claims(
+            _fetch_source_detail_claims_by_source_id(conn, source_id)
+        )
+        return SourceDetailResponse(
+            source=_row_to_source_detail_source(source_row),
+            assets=assets,
+            claims=claims,
+            summary=_build_source_detail_summary(claims, assets),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected database error: {exc}",
+        ) from exc
 
 
 @router.get("/{source_id}", response_model=SourceReadResponse)
