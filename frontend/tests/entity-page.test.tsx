@@ -191,6 +191,86 @@ describe("EntityDetailPage", () => {
     expect(screen.getAllByText("No evidence asset linked.").length).toBeGreaterThan(0);
   });
 
+  it("links source titles to source detail while preserving distinct external original URLs", async () => {
+    mockFetchJson(sampleDetailResponse);
+
+    await renderEntityPage();
+
+    const internalLinks = await screen.findAllByRole("link", {
+      name: "Internal Editorial Mapping",
+    });
+    expect(internalLinks).toHaveLength(2);
+    internalLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/sources/SRC-INT-0001");
+      expect(link).not.toHaveAttribute("target", "_blank");
+    });
+    expect(screen.getAllByText("SRC-INT-0001").length).toBeGreaterThan(0);
+
+    const externalLinks = screen.getAllByRole("link", {
+      name: "https://example.com/internal-mapping",
+    });
+    expect(externalLinks).toHaveLength(2);
+    externalLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "https://example.com/internal-mapping");
+      expect(link).toHaveAttribute("target", "_blank");
+    });
+  });
+
+  it("keeps duplicate-source claim provenance and source detail links", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      claims: [
+        sampleDetailResponse.claims[0],
+        {
+          ...sampleDetailResponse.claims[0],
+          claim_id: "CLM-0003",
+          direction: "incoming" as const,
+        },
+      ],
+    });
+
+    await renderEntityPage();
+
+    expect((await screen.findAllByText("CLM-0001")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("CLM-0003").length).toBeGreaterThan(0);
+    const provenanceLinks = screen.getAllByRole("link", { name: "Internal Editorial Mapping" });
+    expect(provenanceLinks).toHaveLength(3);
+    provenanceLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/sources/SRC-INT-0001");
+    });
+  });
+
+  it("falls back to a source ID link and avoids malformed links when provenance IDs are missing", async () => {
+    mockFetchJson({
+      ...sampleDetailResponse,
+      sources: [
+        {
+          ...sampleDetailResponse.sources[0],
+          title: "" as string,
+        },
+      ],
+      claims: [
+        {
+          ...sampleDetailResponse.claims[0],
+          source_id: "SRC-INT-0001",
+        },
+        {
+          ...sampleDetailResponse.claims[1],
+          claim_id: "CLM-0004",
+          source_id: undefined as unknown as string | null,
+        },
+      ],
+    });
+
+    await renderEntityPage();
+
+    const fallbackLinks = await screen.findAllByRole("link", { name: "SRC-INT-0001" });
+    expect(fallbackLinks).toHaveLength(2);
+    fallbackLinks.forEach((link) => expect(link).toHaveAttribute("href", "/sources/SRC-INT-0001"));
+    expect(screen.getAllByText("CLM-0004").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: /undefined|null/i })).not.toBeInTheDocument();
+  });
+
   it("shows the empty alias state when no aliases are present", async () => {
     mockFetchJson({
       ...sampleDetailResponse,

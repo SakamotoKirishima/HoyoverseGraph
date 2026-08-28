@@ -98,6 +98,39 @@ function isExternalUrl(value: string | null): boolean {
   return Boolean(value && /^https?:\/\//i.test(value));
 }
 
+function sourceIdValue(sourceId: string | null | undefined): string {
+  return typeof sourceId === "string" ? sourceId.trim() : "";
+}
+
+function sourceTitleValue(title: string | null | undefined): string {
+  return typeof title === "string" ? title.trim() : "";
+}
+
+function SourceDetailReference({
+  sourceId,
+  title,
+}: {
+  sourceId: string | null | undefined;
+  title: string | null | undefined;
+}) {
+  const normalizedSourceId = sourceIdValue(sourceId);
+  const normalizedTitle = sourceTitleValue(title);
+  const label = normalizedTitle || normalizedSourceId || "Source metadata unavailable.";
+
+  if (!normalizedSourceId) {
+    return <>{label}</>;
+  }
+
+  return (
+    <Link
+      className="provenance-source-link"
+      href={`/sources/${encodeURIComponent(normalizedSourceId)}`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 function getGraphLink(
   graphUrl: string | null | undefined,
   entityId: string,
@@ -428,60 +461,67 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
 
           {data.sources.length > 0 ? (
             <div className="detail-grid" style={{ marginTop: 16 }}>
-              {data.sources.map((source) => (
-                <article className="detail-card" key={source.source_id}>
-                  <h3>{source.title}</h3>
-                  <p className="muted code-line" style={{ marginTop: 8 }}>
-                    {source.source_id}
-                  </p>
+              {data.sources.map((source) => {
+                const normalizedSourceId = sourceIdValue(source.source_id);
+                const normalizedTitle = sourceTitleValue(source.title);
 
-                  <dl className="detail-list" style={{ marginTop: 16 }}>
-                    <div>
-                      <dt>Source type</dt>
-                      <dd>{source.source_type}</dd>
-                    </div>
-                    <div>
-                      <dt>Source format</dt>
-                      <dd>{source.source_format}</dd>
-                    </div>
-                    <div>
-                      <dt>Game</dt>
-                      <dd>{formatOptional(source.game)}</dd>
-                    </div>
-                    <div>
-                      <dt>Scope</dt>
-                      <dd>{formatOptional(source.scope)}</dd>
-                    </div>
-                    <div>
-                      <dt>Reliability tier</dt>
-                      <dd>{formatOptional(source.reliability_tier)}</dd>
-                    </div>
-                    <div>
-                      <dt>URL</dt>
-                      <dd>
-                        {source.url ? (
-                          <a
-                            className="external-link"
-                            href={source.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {source.url}
-                          </a>
-                        ) : (
-                          "No public URL"
-                        )}
-                      </dd>
-                    </div>
-                    {source.notes ? (
+                return (
+                  <article className="detail-card" key={source.source_id}>
+                    <h3>
+                      <SourceDetailReference sourceId={source.source_id} title={source.title} />
+                    </h3>
+                    <p className="muted code-line" style={{ marginTop: 8 }}>
+                      {normalizedTitle ? normalizedSourceId || "No source ID" : ""}
+                    </p>
+
+                    <dl className="detail-list" style={{ marginTop: 16 }}>
                       <div>
-                        <dt>Notes</dt>
-                        <dd>{source.notes}</dd>
+                        <dt>Source type</dt>
+                        <dd>{source.source_type}</dd>
                       </div>
-                    ) : null}
-                  </dl>
-                </article>
-              ))}
+                      <div>
+                        <dt>Source format</dt>
+                        <dd>{source.source_format}</dd>
+                      </div>
+                      <div>
+                        <dt>Game</dt>
+                        <dd>{formatOptional(source.game)}</dd>
+                      </div>
+                      <div>
+                        <dt>Scope</dt>
+                        <dd>{formatOptional(source.scope)}</dd>
+                      </div>
+                      <div>
+                        <dt>Reliability tier</dt>
+                        <dd>{formatOptional(source.reliability_tier)}</dd>
+                      </div>
+                      <div>
+                        <dt>URL</dt>
+                        <dd>
+                          {source.url ? (
+                            <a
+                              className="external-link"
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {source.url}
+                            </a>
+                          ) : (
+                            "No public URL"
+                          )}
+                        </dd>
+                      </div>
+                      {source.notes ? (
+                        <div>
+                          <dt>Notes</dt>
+                          <dd>{source.notes}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <p className="muted" style={{ marginTop: 16 }}>
@@ -571,7 +611,8 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
           {data.claims.length > 0 ? (
             <div className="detail-grid" style={{ marginTop: 16 }}>
               {data.claims.map((claim) => {
-                const linkedSource = claim.source_id ? sourcesById.get(claim.source_id) : null;
+                const normalizedSourceId = sourceIdValue(claim.source_id);
+                const linkedSource = normalizedSourceId ? sourcesById.get(normalizedSourceId) : null;
                 const linkedAsset = claim.asset_id ? assetsById.get(claim.asset_id) : null;
 
                 return (
@@ -598,7 +639,13 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                       </div>
                       <div>
                         <dt>Source ID</dt>
-                        <dd>{claim.source_id ? <span className="code-line">{claim.source_id}</span> : "No source linked."}</dd>
+                        <dd>
+                          {normalizedSourceId ? (
+                            <span className="code-line">{normalizedSourceId}</span>
+                          ) : (
+                            "No source linked."
+                          )}
+                        </dd>
                       </div>
                       <div>
                         <dt>Asset ID</dt>
@@ -620,13 +667,18 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
 
                     <div className="provenance-block">
                       <h4>Source record</h4>
-                      {!claim.source_id ? (
+                      {!normalizedSourceId ? (
                         <p className="muted">No source linked.</p>
                       ) : linkedSource ? (
                         <dl className="detail-list">
                           <div>
                             <dt>Title</dt>
-                            <dd>{linkedSource.title}</dd>
+                            <dd>
+                              <SourceDetailReference
+                                sourceId={normalizedSourceId}
+                                title={linkedSource.title}
+                              />
+                            </dd>
                           </div>
                           <div>
                             <dt>Type</dt>
@@ -659,7 +711,9 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
                           </div>
                         </dl>
                       ) : (
-                        <p className="muted">Source metadata unavailable.</p>
+                        <p className="muted">
+                          <SourceDetailReference sourceId={normalizedSourceId} title={null} />
+                        </p>
                       )}
                     </div>
 
