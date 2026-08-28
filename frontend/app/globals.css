@@ -204,6 +204,11 @@ main {
   outline-offset: 3px;
 }
 
+.source-reference {
+  display: grid;
+  gap: 4px;
+}
+
 .meta-row,
 .aliases,
 .description,

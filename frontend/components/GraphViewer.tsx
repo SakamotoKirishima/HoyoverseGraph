@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { buildApiUrl } from "../lib/api";
+import { getSourceIdValue, getSourceTitleValue, SourceDetailReference } from "./SourceDetailReference";
 
 type GraphElementDefinition = {
   data: Record<string, string | number | null>;
@@ -566,6 +567,12 @@ export function GraphViewer() {
   const summary = graphData
     ? `${graphData.nodes.length} node${graphData.nodes.length === 1 ? "" : "s"} · ${graphData.edges.length} edge${graphData.edges.length === 1 ? "" : "s"}`
     : "No graph loaded yet.";
+  const selectedClaimSourceId =
+    selectedElement?.kind === "edge"
+      ? getSourceIdValue(selectedClaimDetails?.source_id ?? selectedElement.data.source_id)
+      : "";
+  const selectedClaimSourceTitle =
+    selectedElement?.kind === "edge" ? getSourceTitleValue(selectedClaimDetails?.source?.title) : "";
 
   return (
     <section className="graph-shell">
@@ -752,8 +759,22 @@ export function GraphViewer() {
                     <dd>{selectedElement.data.evidence_status ?? "Unknown"}</dd>
                   </div>
                   <div>
-                    <dt>Source ID</dt>
-                    <dd className="code-line">{selectedElement.data.source_id ?? "None"}</dd>
+                    <dt>Source</dt>
+                    <dd>
+                      {selectedClaimSourceId || selectedClaimSourceTitle ? (
+                        <span className="source-reference">
+                          <SourceDetailReference
+                            sourceId={selectedClaimSourceId}
+                            title={selectedClaimSourceTitle}
+                          />
+                          {selectedClaimSourceTitle && selectedClaimSourceId ? (
+                            <span className="code-line muted">{selectedClaimSourceId}</span>
+                          ) : null}
+                        </span>
+                      ) : (
+                        "No source linked."
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>Asset ID</dt>
@@ -774,10 +795,6 @@ export function GraphViewer() {
                   <div>
                     <dt>Note</dt>
                     <dd>{selectedClaimDetails?.note ?? "No note available."}</dd>
-                  </div>
-                  <div>
-                    <dt>Source title</dt>
-                    <dd>{selectedClaimDetails?.source?.title ?? "No source title available."}</dd>
                   </div>
                   <div>
                     <dt>Asset description</dt>

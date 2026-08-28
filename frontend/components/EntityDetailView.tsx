@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { buildApiUrl } from "../lib/api";
+import {
+  getSourceIdValue,
+  getSourceTitleValue,
+  SourceDetailReference,
+} from "./SourceDetailReference";
 
 type EntityDetailEntity = {
   entity_id: string;
@@ -96,39 +101,6 @@ function formatConfidence(value: number | null): string {
 
 function isExternalUrl(value: string | null): boolean {
   return Boolean(value && /^https?:\/\//i.test(value));
-}
-
-function sourceIdValue(sourceId: string | null | undefined): string {
-  return typeof sourceId === "string" ? sourceId.trim() : "";
-}
-
-function sourceTitleValue(title: string | null | undefined): string {
-  return typeof title === "string" ? title.trim() : "";
-}
-
-function SourceDetailReference({
-  sourceId,
-  title,
-}: {
-  sourceId: string | null | undefined;
-  title: string | null | undefined;
-}) {
-  const normalizedSourceId = sourceIdValue(sourceId);
-  const normalizedTitle = sourceTitleValue(title);
-  const label = normalizedTitle || normalizedSourceId || "Source metadata unavailable.";
-
-  if (!normalizedSourceId) {
-    return <>{label}</>;
-  }
-
-  return (
-    <Link
-      className="provenance-source-link"
-      href={`/sources/${encodeURIComponent(normalizedSourceId)}`}
-    >
-      {label}
-    </Link>
-  );
 }
 
 function getGraphLink(
@@ -462,8 +434,8 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
           {data.sources.length > 0 ? (
             <div className="detail-grid" style={{ marginTop: 16 }}>
               {data.sources.map((source) => {
-                const normalizedSourceId = sourceIdValue(source.source_id);
-                const normalizedTitle = sourceTitleValue(source.title);
+                const normalizedSourceId = getSourceIdValue(source.source_id);
+                const normalizedTitle = getSourceTitleValue(source.title);
 
                 return (
                   <article className="detail-card" key={source.source_id}>
@@ -611,7 +583,7 @@ export function EntityDetailView({ entityId }: { entityId: string }) {
           {data.claims.length > 0 ? (
             <div className="detail-grid" style={{ marginTop: 16 }}>
               {data.claims.map((claim) => {
-                const normalizedSourceId = sourceIdValue(claim.source_id);
+                const normalizedSourceId = getSourceIdValue(claim.source_id);
                 const linkedSource = normalizedSourceId ? sourcesById.get(normalizedSourceId) : null;
                 const linkedAsset = claim.asset_id ? assetsById.get(claim.asset_id) : null;
 
